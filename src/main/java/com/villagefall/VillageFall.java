@@ -12,5 +12,6 @@ public class VillageFall {
     public VillageFall() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, FallConfig.SPEC);
         MinecraftForge.EVENT_BUS.register(new FallManager());
+        MinecraftForge.EVENT_BUS.register(new PlayerAggression());
     }
 }

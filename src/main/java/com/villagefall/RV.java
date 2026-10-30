@@ -22,6 +22,7 @@ final class RV {
     private static Method dataGet, getFactions, removeFaction, getFaction;
     private static Method fId, fName, fCenter, fPlayer, fRecruits, fCivilians, fSetPop, fSetRecruitProg, fSetCivProg,
             fCapitalId, fSetCapitalId, fLeaderRef, fRoster, fAddCivilians, fStringId;
+    private static Method factionOfPlayer, declareWar, fFactionId, fIsPlayerFaction2;
     private static Method villageBox, absorb, factionOf, unitOf, isTracked, entityIdForUnit, isAtWar, civilianType,
             trimToCapacity, unitId;
 
@@ -67,7 +68,39 @@ final class RV {
         civilianType = civClass.getMethod("civilianType");
         trimToCapacity = popClass.getMethod("trimToCapacity", factionClass);
         unitId = unitClass.getMethod("getId");
+        Class<?> pfs = Class.forName("com.diego.recruitsvillages.player.PlayerFactionService");
+        factionOfPlayer = pfs.getMethod("factionOfPlayer", ServerLevel.class, net.minecraft.server.level.ServerPlayer.class);
+        declareWar = warClass.getMethod("declareWar", ServerLevel.class, factionClass, factionClass,
+                net.minecraft.server.level.ServerPlayer.class, java.util.Set.class, java.util.Set.class);
+        fFactionId = factionClass.getMethod("getFactionId");
         ready = true;
+    }
+
+    static Object factionOfPlayer(ServerLevel level, net.minecraft.server.level.ServerPlayer p) throws Exception {
+        return factionOfPlayer.invoke(null, level, p);
+    }
+
+    static boolean declareWar(ServerLevel level, Object attacker, Object defender, net.minecraft.server.level.ServerPlayer p)
+            throws Exception {
+        return Boolean.TRUE.equals(declareWar.invoke(null, level, attacker, defender, p, null, null));
+    }
+
+    static UUID factionGroupId(Object f) throws Exception { return (UUID) fFactionId.invoke(f); }
+    static String stringId(Object f) throws Exception { return String.valueOf(fStringId.invoke(f)); }
+
+    /** Recruits diplomacy: are the two teams allies? Best effort (false when unsure). */
+    static boolean allies(String teamA, String teamB) {
+        try {
+            Class<?> fe = Class.forName("com.talhanation.recruits.FactionEvents");
+            Object dm = fe.getField("recruitsDiplomacyManager").get(null);
+            if (dm == null || teamA == null || teamB == null || teamA.isEmpty() || teamB.isEmpty()) {
+                return false;
+            }
+            Object rel = dm.getClass().getMethod("getRelation", String.class, String.class).invoke(dm, teamA, teamB);
+            return rel != null && "ALLY".equals(String.valueOf(rel));
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     static Object data(MinecraftServer s) throws Exception { return dataGet.invoke(null, s); }

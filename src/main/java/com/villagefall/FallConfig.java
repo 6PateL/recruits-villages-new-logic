@@ -15,6 +15,7 @@ public class FallConfig {
     public static final ForgeConfigSpec.BooleanValue WIPE_FALLS;
     public static final ForgeConfigSpec.IntValue SCAN_RADIUS;
     public static final ForgeConfigSpec.BooleanValue ANNOUNCE;
+    public static final ForgeConfigSpec.BooleanValue AUTO_WAR;
     public static final ForgeConfigSpec.BooleanValue RETREAT_ENABLED;
     public static final ForgeConfigSpec.IntValue RETREAT_PERCENT;
     public static final ForgeConfigSpec.IntValue LEADER_FLAG_MINUTES;
@@ -42,6 +43,8 @@ public class FallConfig {
         SCAN_RADIUS = b.comment("Radius (blocks) around the village centre in which attackers are counted.")
                 .defineInRange("scanRadius", 70, 16, 200);
         ANNOUNCE = b.comment("Tell all players when a village falls (name and coordinates).").define("announce", true);
+        AUTO_WAR = b.comment("A player who is in a faction and attacks a village soldier automatically declares the normal war (conquest) on that village. Players without a faction wage a war of annihilation instead.")
+                .define("autoDeclareWar", true);
         b.pop();
         b.push("retreat");
         RETREAT_ENABLED = b.comment("When the leader is killed by an enemy of the village (hostile mobs, barbarians, infected, a player without a faction) and few villagers are left, the survivors flee.")

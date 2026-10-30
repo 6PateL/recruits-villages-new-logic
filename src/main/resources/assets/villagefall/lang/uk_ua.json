@@ -3,5 +3,7 @@
   "msg.villagefall.retreat_refuge": "Лідер села «%s» загинув, вцілілі тікають до «%s» (X %s, Z %s)!",
   "msg.villagefall.retreat_flee": "Лідер села «%s» загинув, вцілілі розбігаються (X %s, Y %s, Z %s)!",
   "msg.villagefall.refugees": "Біженці з «%s» дісталися «%s»: %s воїнів і %s жителів приєдналися до нього.",
-  "msg.villagefall.mercenaries": "Села «%s» більше нема. %s його воїнів блукають як найманці."
+  "msg.villagefall.mercenaries": "Села «%s» більше нема. %s його воїнів блукають як найманці.",
+  "msg.villagefall.auto_war": "Ви напали на село «%s»: оголошено війну за захоплення.",
+  "msg.villagefall.auto_war_failed": "Ви напали на село «%s», але війну зараз оголосити не можна (війна вже йде, відкат або союзники)."
 }

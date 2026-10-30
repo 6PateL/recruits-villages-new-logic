@@ -3,5 +3,7 @@
   "msg.villagefall.retreat_refuge": "The leader of \"%s\" is dead, the survivors flee to \"%s\" (X %s, Z %s)!",
   "msg.villagefall.retreat_flee": "The leader of \"%s\" is dead, the survivors scatter (X %s, Y %s, Z %s)!",
   "msg.villagefall.refugees": "Refugees from \"%s\" reached \"%s\": %s soldiers and %s villagers joined it.",
-  "msg.villagefall.mercenaries": "\"%s\" is no more. %s of its soldiers wander off as mercenaries."
+  "msg.villagefall.mercenaries": "\"%s\" is no more. %s of its soldiers wander off as mercenaries.",
+  "msg.villagefall.auto_war": "You attacked the village \"%s\": war for conquest declared.",
+  "msg.villagefall.auto_war_failed": "You attacked the village \"%s\", but war cannot be declared right now (a war is on, cooldown or allies)."
 }

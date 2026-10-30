@@ -67,14 +67,27 @@ public class FallManager {
     }
 
     /** Things that make war on a village without declaring one. */
-    private static boolean isAnnihilator(Entity src) {
+    private static boolean isAnnihilator(ServerLevel level, Entity src) {
         if (src == null) {
             return false;
         }
         if (src instanceof ServerPlayer p) {
-            return p.getTeam() == null; // a player who belongs to no faction
+            return !hasFaction(level, p); // a player who belongs to no faction
         }
         return src instanceof Enemy && !isRecruitsMob(src);
+    }
+
+    /** A player "has a faction" when Recruits Villages knows his team. Such players go to war by the rules (PlayerAggression). */
+    static boolean hasFaction(ServerLevel level, ServerPlayer p) {
+        if (p.getTeam() == null) {
+            return false;
+        }
+        try {
+            RV.init();
+            return RV.factionOfPlayer(level, p) != null;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private void fail(Throwable t) {
@@ -93,7 +106,7 @@ public class FallManager {
         try {
             RV.init();
             UUID vid = RV.factionOf(event.getEntity().getUUID());
-            if (vid == null || !isAnnihilator(event.getSource().getEntity()) || RV.atWar(vid)) {
+            if (vid == null || !isAnnihilator(level, event.getSource().getEntity()) || RV.atWar(vid)) {
                 return;
             }
             Object data = RV.data(level.getServer());
@@ -211,7 +224,7 @@ public class FallManager {
         int n = level.getEntitiesOfClass(LivingEntity.class, scan,
                 m -> m instanceof Enemy && m.isAlive() && !isRecruitsMob(m)).size();
         if (now - st.lastPlayerKill < 2400L) { // a player without a faction recently killed villagers
-            for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, scan, p -> p.getTeam() == null && p.isAlive())) {
+            for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, scan, p -> p.isAlive() && !hasFaction(level, p))) {
                 n += FallConfig.MIN_ATTACKERS.get();
                 break;
             }
