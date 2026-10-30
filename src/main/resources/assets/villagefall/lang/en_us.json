@@ -1,1 +1,7 @@
-{"msg.villagefall.fallen":"The village \"%s\" (X %s, Y %s, Z %s) has fallen!"}
+{
+  "msg.villagefall.fallen": "The village \"%s\" (X %s, Y %s, Z %s) has fallen!",
+  "msg.villagefall.retreat_refuge": "The leader of \"%s\" is dead, the survivors flee to \"%s\" (X %s, Z %s)!",
+  "msg.villagefall.retreat_flee": "The leader of \"%s\" is dead, the survivors scatter (X %s, Y %s, Z %s)!",
+  "msg.villagefall.refugees": "Refugees from \"%s\" reached \"%s\": %s soldiers and %s villagers joined it.",
+  "msg.villagefall.mercenaries": "\"%s\" is no more. %s of its soldiers wander off as mercenaries."
+}
