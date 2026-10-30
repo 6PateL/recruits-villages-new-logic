@@ -90,6 +90,11 @@ public class FallManager {
         }
     }
 
+    /** A player without a faction is attacking this village (killing its soldiers or dismantling it). */
+    void markPlayerAggression(UUID village, long now) {
+        states.computeIfAbsent(village, k -> new State()).lastPlayerKill = now;
+    }
+
     private void fail(Throwable t) {
         broken = true;
         LOG.error("[VillageFall] cannot talk to Recruits Villages, disabled: {}", t.toString());
