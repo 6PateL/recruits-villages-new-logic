@@ -1,0 +1,30 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="villagefall"
+version="${mod_version}"
+displayName="Village Fall"
+description='''Lets Recruits Villages settlements be destroyed: a besieged village stops regrowing and falls when its garrison is gone.'''
+
+[[dependencies.villagefall]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.villagefall]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.villagefall]]
+    modId="recruitsvillages"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"
