@@ -17,6 +17,14 @@ public class FallConfig {
     public static final ForgeConfigSpec.BooleanValue ANNOUNCE;
     public static final ForgeConfigSpec.BooleanValue AUTO_WAR;
     public static final ForgeConfigSpec.IntValue DISMANTLE_BLOCKS;
+    public static final ForgeConfigSpec.IntValue ARSON_ATTEMPTS;
+    public static final ForgeConfigSpec.IntValue ARSON_WINDOW_SECONDS;
+    public static final ForgeConfigSpec.IntValue TERRITORY_MARGIN;
+    public static final ForgeConfigSpec.IntValue MOLOTOV_RANGE;
+    public static final ForgeConfigSpec.BooleanValue CAMPFIRES;
+    public static final ForgeConfigSpec.BooleanValue CAMPFIRE_REQUIRE_SNOW;
+    public static final ForgeConfigSpec.IntValue CAMPFIRE_MAX_NEAR;
+    public static final ForgeConfigSpec.IntValue CAMPFIRE_COOLDOWN_SECONDS;
     public static final ForgeConfigSpec.BooleanValue RETREAT_ENABLED;
     public static final ForgeConfigSpec.IntValue RETREAT_PERCENT;
     public static final ForgeConfigSpec.IntValue LEADER_FLAG_MINUTES;
@@ -48,6 +56,24 @@ public class FallConfig {
                 .define("autoDeclareWar", true);
         DISMANTLE_BLOCKS = b.comment("Breaking this many blocks inside a village within a minute counts as dismantling it (same as attacking its soldiers).")
                 .defineInRange("dismantleBlocks", 12, 1, 200);
+        ARSON_ATTEMPTS = b.comment("Lighting fires (flint and steel, fire charge, lava) inside a village this many times within arsonWindowSeconds counts as an attack on it.")
+                .defineInRange("arsonAttempts", 6, 1, 100);
+        ARSON_WINDOW_SECONDS = b.comment("Time window for counting arson attempts.")
+                .defineInRange("arsonWindowSeconds", 120, 10, 3600);
+        TERRITORY_MARGIN = b.comment("Territory of a village = its box expanded by this many blocks. Placing or lighting TNT inside it is an attack.")
+                .defineInRange("territoryMargin", 24, 0, 128);
+        MOLOTOV_RANGE = b.comment("A molotov thrown by a player counts as an attack if its flight line crosses a village's territory within this distance (blocks).")
+                .defineInRange("molotovRange", 80, 8, 256);
+        b.pop();
+        b.push("winter");
+        CAMPFIRES = b.comment("In winter snowfall ordinary villagers light campfires near their gathering place.")
+                .define("campfires", true);
+        CAMPFIRE_REQUIRE_SNOW = b.comment("Only while it is actually snowing in that spot (otherwise also whenever Serene Seasons says winter).")
+                .define("requireSnowfall", true);
+        CAMPFIRE_MAX_NEAR = b.comment("Do not place a new campfire if this many already burn within 10 blocks.")
+                .defineInRange("maxCampfiresNear", 2, 1, 10);
+        CAMPFIRE_COOLDOWN_SECONDS = b.comment("Pause between campfires lit by villagers of the same area.")
+                .defineInRange("cooldownSeconds", 180, 10, 3600);
         b.pop();
         b.push("retreat");
         RETREAT_ENABLED = b.comment("When the leader is killed by an enemy of the village (hostile mobs, barbarians, infected, a player without a faction) and few villagers are left, the survivors flee.")
