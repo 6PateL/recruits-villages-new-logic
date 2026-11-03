@@ -138,6 +138,15 @@ final class RV {
         fSetCivProg.invoke(f, 0);
     }
 
+    /** Faction of a village member: villagers carry the RVVillagerFaction tag, soldiers are tracked by factionOf. */
+    static UUID memberFaction(net.minecraft.world.entity.Entity e) throws Exception {
+        net.minecraft.nbt.CompoundTag d = e.getPersistentData();
+        if (d.hasUUID("RVVillagerFaction")) {
+            return d.getUUID("RVVillagerFaction");
+        }
+        return factionOf(e.getUUID());
+    }
+
     static boolean claimsBroken = false;
 
     /** UUID of the Recruits claim that covers the chunk of the position, or null. */

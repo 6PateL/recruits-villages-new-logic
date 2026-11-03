@@ -57,7 +57,7 @@ public class PlayerAggression {
         }
         try {
             RV.init();
-            UUID vid = RV.factionOf(event.getEntity().getUUID());
+            UUID vid = RV.memberFaction(event.getEntity());
             if (vid == null) {
                 return; // not a village member
             }
@@ -106,7 +106,7 @@ public class PlayerAggression {
                 new AABB(pos, pos).inflate(r))) {
             if (e instanceof net.minecraft.world.entity.npc.Villager
                     || e.getClass().getName().startsWith("com.talhanation.recruits.")) {
-                UUID vid = RV.factionOf(e.getUUID());
+                UUID vid = RV.memberFaction(e);
                 if (vid != null) {
                     Object f = RV.faction(RV.data(level.getServer()), vid);
                     if (f != null && !RV.player(f)) {
@@ -175,7 +175,7 @@ public class PlayerAggression {
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onFlame(net.minecraftforge.event.entity.living.LivingEntityUseItemEvent.Tick event) {
         if (broken || !FallConfig.AUTO_WAR.get() || !(event.getEntity() instanceof ServerPlayer player)
-                || !(event.getEntity().level() instanceof ServerLevel level) || event.getDuration() % 20 != 0
+                || !(event.getEntity().level() instanceof ServerLevel level) || event.getDuration() % 10 != 0
                 || !BuiltInRegistries.ITEM.getKey(event.getItem().getItem()).equals(FLAMETHROWER)
                 || !ModList.get().isLoaded("recruitsvillages")) {
             return;
@@ -186,8 +186,11 @@ public class PlayerAggression {
             if (v == null) {
                 v = villageAt(level, ahead.x, ahead.y, ahead.z);
             }
+            if (v == null) {
+                v = villageMemberNear(level, ahead, 6.0D);
+            }
             if (v != null && !defending(level, player.position())) {
-                offence(level, player, v, "flame", FallConfig.FLAME_ATTEMPTS.get());
+                offence(level, player, v, "flame", 1);
             }
         } catch (Throwable t) {
             fail(t);
@@ -386,7 +389,7 @@ public class PlayerAggression {
         AABB area = player.getBoundingBox().inflate(hostile ? 40.0D : 18.0D);
         for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, area)) {
             if (e instanceof net.minecraft.world.entity.npc.Villager vill) {
-                if (!vid.equals(RV.factionOf(vill.getUUID()))) {
+                if (!vid.equals(RV.memberFaction(vill))) {
                     continue;
                 }
                 level.broadcastEntityEvent(vill, (byte) 13); // angry particles
@@ -397,7 +400,7 @@ public class PlayerAggression {
                 }
             } else if (hostile && (e instanceof net.minecraft.world.entity.animal.IronGolem
                     || e.getClass().getName().startsWith("com.talhanation.recruits."))
-                    && vid.equals(RV.factionOf(e.getUUID())) && e instanceof net.minecraft.world.entity.Mob m) {
+                    && vid.equals(RV.memberFaction(e)) && e instanceof net.minecraft.world.entity.Mob m) {
                 m.setTarget(player);
             }
         }
