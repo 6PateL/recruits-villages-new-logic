@@ -25,6 +25,10 @@ public class FallConfig {
     public static final ForgeConfigSpec.BooleanValue CAMPFIRE_REQUIRE_SNOW;
     public static final ForgeConfigSpec.IntValue CAMPFIRE_MAX_NEAR;
     public static final ForgeConfigSpec.IntValue CAMPFIRE_COOLDOWN_SECONDS;
+    public static final ForgeConfigSpec.BooleanValue FIREFIGHT;
+    public static final ForgeConfigSpec.IntValue FIREFIGHT_RANGE;
+    public static final ForgeConfigSpec.BooleanValue FIREFIGHT;
+    public static final ForgeConfigSpec.IntValue FIREFIGHT_RANGE;
     public static final ForgeConfigSpec.BooleanValue RETREAT_ENABLED;
     public static final ForgeConfigSpec.IntValue RETREAT_PERCENT;
     public static final ForgeConfigSpec.IntValue LEADER_FLAG_MINUTES;
@@ -74,6 +78,12 @@ public class FallConfig {
                 .defineInRange("maxCampfiresNear", 2, 1, 10);
         CAMPFIRE_COOLDOWN_SECONDS = b.comment("Pause between campfires lit by villagers of the same area.")
                 .defineInRange("cooldownSeconds", 180, 10, 3600);
+        b.pop();
+        b.push("firefighting");
+        FIREFIGHT = b.comment("Ordinary villagers put out fires by pouring water on them and pick the water up afterwards.")
+                .define("enabled", true);
+        FIREFIGHT_RANGE = b.comment("Villagers notice fires within this many blocks.")
+                .defineInRange("range", 14, 4, 48);
         b.pop();
         b.push("retreat");
         RETREAT_ENABLED = b.comment("When the leader is killed by an enemy of the village (hostile mobs, barbarians, infected, a player without a faction) and few villagers are left, the survivors flee.")
