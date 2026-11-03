@@ -147,7 +147,11 @@ public class PlayerAggression {
                 st[0] = 0;
                 st[1] = (int) now;
             }
-            if (++st[0] >= FallConfig.ARSON_ATTEMPTS.get()) {
+            st[0]++;
+            react(level, player, v, false);
+            player.displayClientMessage(Component.translatable("msg.villagefall.warn_fire", RV.name(v), st[0],
+                    FallConfig.ARSON_ATTEMPTS.get()), true);
+            if (st[0] >= FallConfig.ARSON_ATTEMPTS.get()) {
                 st[0] = 0;
                 st[1] = (int) now;
                 LOG.info("[VillageFall] {} is setting fire to '{}'", player.getName().getString(), RV.name(v));
@@ -228,6 +232,7 @@ public class PlayerAggression {
 
     private void attack(ServerLevel level, ServerPlayer player, Object target) throws Exception {
         UUID vid = RV.id(target);
+        react(level, player, target, true);
         if (RV.player(target) || RV.atWar(vid)) {
             return;
         }
@@ -253,6 +258,31 @@ public class PlayerAggression {
                 started ? "declared" : "not possible");
         player.sendSystemMessage(Component.translatable(
                 started ? "msg.villagefall.auto_war" : "msg.villagefall.auto_war_failed", RV.name(target)));
+    }
+
+    /**
+     * Visible reaction of the village: nearby villagers get angry and run, its soldiers and golems pick the
+     * offender as a target (only when {@code hostile}, i.e. the real attack threshold is reached).
+     */
+    private void react(ServerLevel level, ServerPlayer player, Object village, boolean hostile) throws Exception {
+        UUID vid = RV.id(village);
+        AABB area = player.getBoundingBox().inflate(hostile ? 40.0D : 18.0D);
+        for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, area)) {
+            if (e instanceof net.minecraft.world.entity.npc.Villager vill) {
+                if (!vid.equals(RV.factionOf(vill.getUUID()))) {
+                    continue;
+                }
+                level.broadcastEntityEvent(vill, (byte) 13); // angry particles
+                vill.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.HURT_BY_ENTITY, player);
+                if (vill.tickCount % 40 == 0) {
+                    vill.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_NO, 1.0F, vill.getVoicePitch());
+                }
+            } else if (hostile && (e instanceof net.minecraft.world.entity.animal.IronGolem
+                    || e.getClass().getName().startsWith("com.talhanation.recruits."))
+                    && vid.equals(RV.factionOf(e.getUUID())) && e instanceof net.minecraft.world.entity.Mob m) {
+                m.setTarget(player);
+            }
+        }
     }
 
     private void fail(Throwable t) {

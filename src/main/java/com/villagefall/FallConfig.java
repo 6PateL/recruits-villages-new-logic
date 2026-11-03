@@ -68,8 +68,8 @@ public class FallConfig {
         b.push("winter");
         CAMPFIRES = b.comment("In winter snowfall ordinary villagers light campfires near their gathering place.")
                 .define("campfires", true);
-        CAMPFIRE_REQUIRE_SNOW = b.comment("Only while it is actually snowing in that spot (otherwise also whenever Serene Seasons says winter).")
-                .define("requireSnowfall", true);
+        CAMPFIRE_REQUIRE_SNOW = b.comment("If true: only while it is actually snowing in that spot. If false (default): also in Serene Seasons winter (non-hot biome) or when snow lies around the villager.")
+                .define("requireSnowfall", false);
         CAMPFIRE_MAX_NEAR = b.comment("Do not place a new campfire if this many already burn within 10 blocks.")
                 .defineInRange("maxCampfiresNear", 2, 1, 10);
         CAMPFIRE_COOLDOWN_SECONDS = b.comment("Pause between campfires lit by villagers of the same area.")

@@ -30,25 +30,34 @@ public class WinterCare {
     private static final Map<Long, Long> AREA_COOLDOWN = new HashMap<>();
 
     @SubscribeEvent
-    public void onJoin(EntityJoinLevelEvent event) {
-        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Villager v) || !FallConfig.CAMPFIRES.get()) {
+    public void onTick(net.minecraftforge.event.entity.living.LivingEvent.LivingTickEvent event) {
+        if (!(event.getEntity() instanceof Villager v) || v.level().isClientSide || !FallConfig.CAMPFIRES.get()
+                || (v.tickCount + v.getId()) % 100 != 0 || v.isSleeping() || !(v.level() instanceof ServerLevel level)) {
             return;
         }
-        for (var g : v.goalSelector.getAvailableGoals()) {
-            if (g.getGoal() instanceof CampfireGoal) {
-                return;
-            }
+        if (cold(level, v.blockPosition())) {
+            new CampfireGoal(v).start();
         }
-        v.goalSelector.addGoal(9, new CampfireGoal(v));
     }
 
     static boolean cold(ServerLevel level, BlockPos pos) {
-        boolean snowing = level.isRaining() && level.getBiome(pos).value().getPrecipitationAt(pos) == Biome.Precipitation.SNOW;
-        if (snowing) {
+        var biome = level.getBiome(pos).value();
+        if (level.isRaining() && biome.getPrecipitationAt(pos) == Biome.Precipitation.SNOW) {
             return true;
         }
-        return !FallConfig.CAMPFIRE_REQUIRE_SNOW.get() && sereneWinter(level)
-                && level.getBiome(pos).value().coldEnoughToSnow(pos);
+        if (FallConfig.CAMPFIRE_REQUIRE_SNOW.get()) {
+            return false;
+        }
+        // winter season (Serene Seasons) in a non-hot biome, or snow lying around the villager
+        if (sereneWinter(level) && biome.getBaseTemperature() < 0.95F) {
+            return true;
+        }
+        for (BlockPos p : BlockPos.betweenClosed(pos.offset(-3, -2, -3), pos.offset(3, 1, 3))) {
+            if (level.getBlockState(p).is(Blocks.SNOW) || level.getBlockState(p).is(Blocks.SNOW_BLOCK)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean sereneWinter(ServerLevel level) {
@@ -90,8 +99,9 @@ public class WinterCare {
             ServerLevel level = (ServerLevel) villager.level();
             lastTry = level.getGameTime();
             BlockPos anchor = anchor();
-            if (anchor == null || villager.blockPosition().distSqr(anchor) > 14 * 14) {
-                return; // away from the gathering place: nothing to do here
+            VillageFall.LOGGER.debug("[winter] {} cold, anchor {}", villager.getId(), anchor);
+            if (villager.blockPosition().distSqr(anchor) > 24 * 24) {
+                anchor = villager.blockPosition();
             }
             long area = ((long) (anchor.getX() >> 5) << 32) ^ (anchor.getZ() >> 5);
             Long last = AREA_COOLDOWN.get(area);
@@ -128,7 +138,7 @@ public class WinterCare {
                     return p.get().pos();
                 }
             }
-            return null;
+            return villager.blockPosition();
         }
 
         private int burning(ServerLevel level, BlockPos c) {
