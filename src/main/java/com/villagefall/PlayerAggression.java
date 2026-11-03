@@ -70,24 +70,28 @@ public class PlayerAggression {
         }
     }
 
-    // ------------------------------------------------------------------ weapons
+    // ------------------------------------------------------------------ territory helpers
 
     private static final net.minecraft.resources.ResourceLocation BAZOOKA = new net.minecraft.resources.ResourceLocation("hostile_civilization", "bazooka");
     private static final net.minecraft.resources.ResourceLocation FLAMETHROWER = new net.minecraft.resources.ResourceLocation("fromanotherworld", "flamethrower_mk_1");
+    private static final net.minecraft.resources.ResourceLocation MOLOTOV_PROJ = new net.minecraft.resources.ResourceLocation("hostile_civilization", "molotov_projectile");
 
-    /** Non-player village whose territory the player's line of sight crosses within {@code range}, or null. */
-    private Object villageInSight(ServerLevel level, ServerPlayer player, double range) throws Exception {
+    /** Non-player village whose claimed chunks (Recruits claim) contain the point; falls back to the village box. */
+    private Object villageAt(ServerLevel level, double x, double y, double z) throws Exception {
         RV.init();
-        Vec3 from = player.getEyePosition();
-        Vec3 to = from.add(player.getLookAngle().scale(range));
+        BlockPos p = BlockPos.containing(x, y, z);
+        UUID claim = RV.claimAt(level, p);
         for (Object f : RV.factions(RV.data(level.getServer()))) {
             if (RV.player(f)) {
                 continue;
             }
-            AABB box = RV.box(f);
-            if (box != null) {
-                AABB big = box.inflate(8);
-                if (big.contains(from) || big.clip(from, to).isPresent()) {
+            if (claim != null) {
+                if (claim.equals(RV.claimAt(level, RV.center(f)))) {
+                    return f;
+                }
+            } else if (RV.claimsBroken) {
+                AABB box = RV.box(f);
+                if (box != null && box.contains(x, y, z)) {
                     return f;
                 }
             }
@@ -95,6 +99,36 @@ public class PlayerAggression {
         return null;
     }
 
+    /** Village whose member (villager or soldier) stands within r blocks of the point, or null. */
+    private Object villageMemberNear(ServerLevel level, Vec3 pos, double r) throws Exception {
+        RV.init();
+        for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                new AABB(pos, pos).inflate(r))) {
+            if (e instanceof net.minecraft.world.entity.npc.Villager
+                    || e.getClass().getName().startsWith("com.talhanation.recruits.")) {
+                UUID vid = RV.factionOf(e.getUUID());
+                if (vid != null) {
+                    Object f = RV.faction(RV.data(level.getServer()), vid);
+                    if (f != null && !RV.player(f)) {
+                        return f;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Hostile mobs nearby: then shooting/burning there counts as defence, not as an attack. */
+    private boolean defending(ServerLevel level, Vec3 pos) {
+        return !level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new AABB(pos, pos).inflate(32.0D),
+                m -> m instanceof net.minecraft.world.entity.monster.Enemy && m.isAlive()
+                        && !m.getClass().getName().startsWith("com.talhanation.recruits.")
+                        && !m.getClass().getName().startsWith("com.diego.recruitsvillages.")).isEmpty();
+    }
+
+    // ------------------------------------------------------------------ weapons
+
+    /** Bazooka fired while standing in the village's chunks (and not defending against monsters). */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onUseItem(PlayerInteractEvent.RightClickItem event) {
         if (broken || !FallConfig.AUTO_WAR.get() || !(event.getEntity() instanceof ServerPlayer player)
@@ -106,8 +140,8 @@ public class PlayerAggression {
             return;
         }
         try {
-            Object v = villageInSight(level, player, 128.0D);
-            if (v != null) {
+            Object v = villageAt(level, player.getX(), player.getY(), player.getZ());
+            if (v != null && !defending(level, player.position())) {
                 offence(level, player, v, "bazooka", 1);
             }
         } catch (Throwable t) {
@@ -115,6 +149,29 @@ public class PlayerAggression {
         }
     }
 
+    /** The bazooka shell explodes in the village's chunks or next to its people. */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public void onExplosion(net.minecraftforge.event.level.ExplosionEvent.Start event) {
+        if (broken || !FallConfig.AUTO_WAR.get() || !(event.getLevel() instanceof ServerLevel level)
+                || !(event.getExplosion().getExploder() instanceof net.minecraft.world.entity.projectile.LargeFireball ball)
+                || !(ball.getOwner() instanceof ServerPlayer player) || !ModList.get().isLoaded("recruitsvillages")) {
+            return;
+        }
+        try {
+            Vec3 at = event.getExplosion().getPosition();
+            Object v = villageAt(level, at.x, at.y, at.z);
+            if (v == null) {
+                v = villageMemberNear(level, at, 6.0D);
+            }
+            if (v != null && !defending(level, at)) {
+                offence(level, player, v, "bazooka", 1);
+            }
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
+    /** Flamethrower used while standing in (or pointing into) the village's chunks. */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onFlame(net.minecraftforge.event.entity.living.LivingEntityUseItemEvent.Tick event) {
         if (broken || !FallConfig.AUTO_WAR.get() || !(event.getEntity() instanceof ServerPlayer player)
@@ -124,9 +181,36 @@ public class PlayerAggression {
             return;
         }
         try {
-            Object v = villageInSight(level, player, 24.0D);
-            if (v != null) {
+            Vec3 ahead = player.getEyePosition().add(player.getLookAngle().scale(7.0D));
+            Object v = villageAt(level, player.getX(), player.getY(), player.getZ());
+            if (v == null) {
+                v = villageAt(level, ahead.x, ahead.y, ahead.z);
+            }
+            if (v != null && !defending(level, player.position())) {
                 offence(level, player, v, "flame", FallConfig.FLAME_ATTEMPTS.get());
+            }
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
+    /** Molotov lands in the village's chunks or next to its people. */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public void onMolotovImpact(net.minecraftforge.event.entity.ProjectileImpactEvent event) {
+        if (broken || !FallConfig.AUTO_WAR.get() || !(event.getProjectile().level() instanceof ServerLevel level)
+                || !(event.getProjectile().getOwner() instanceof ServerPlayer player)
+                || !BuiltInRegistries.ENTITY_TYPE.getKey(event.getProjectile().getType()).equals(MOLOTOV_PROJ)
+                || !ModList.get().isLoaded("recruitsvillages")) {
+            return;
+        }
+        try {
+            Vec3 at = event.getRayTraceResult().getLocation();
+            Object v = villageAt(level, at.x, at.y, at.z);
+            if (v == null) {
+                v = villageMemberNear(level, at, 5.0D);
+            }
+            if (v != null && !defending(level, at)) {
+                offence(level, player, v, "molotov", 1);
             }
         } catch (Throwable t) {
             fail(t);
@@ -171,26 +255,11 @@ public class PlayerAggression {
         }
     }
 
-    // ------------------------------------------------------------------ arson, TNT, molotov
+    // ------------------------------------------------------------------ arson, TNT
 
-    private final Map<String, int[]> arson = new HashMap<>(); // player|village -> {count, window start}
+    private final Map<String, int[]> arson = new HashMap<>(); // player|village|kind -> {count, window start}
 
-    /** Village (not a player's) whose territory (box + margin) contains the point, or null. */
-    private Object villageAt(ServerLevel level, double x, double y, double z, int margin) throws Exception {
-        RV.init();
-        for (Object f : RV.factions(RV.data(level.getServer()))) {
-            if (RV.player(f)) {
-                continue;
-            }
-            AABB box = RV.box(f);
-            if (box != null && box.inflate(margin).contains(x, y, z)) {
-                return f;
-            }
-        }
-        return null;
-    }
-
-    /** Fire is lit by a player inside a village (flint and steel, fire charge, lava). */
+    /** Fire is lit by a player in a village's chunks (flint and steel, fire charge, lava). */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onIgnite(PlayerInteractEvent.RightClickBlock event) {
         if (broken || !FallConfig.AUTO_WAR.get() || !(event.getEntity() instanceof ServerPlayer player)
@@ -203,17 +272,16 @@ public class PlayerAggression {
         }
         try {
             BlockPos pos = event.getPos();
-            Object v = villageAt(level, pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, 8);
-            if (v == null) {
-                return;
+            Object v = villageAt(level, pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
+            if (v != null) {
+                offence(level, player, v, "fire", FallConfig.ARSON_ATTEMPTS.get());
             }
-            offence(level, player, v, "fire", FallConfig.ARSON_ATTEMPTS.get());
         } catch (Throwable t) {
             fail(t);
         }
     }
 
-    /** TNT placed or lit by a player on the territory of a village. */
+    /** TNT placed by a player in a village's chunks. */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onPlaceTnt(BlockEvent.EntityPlaceEvent event) {
         if (broken || !FallConfig.AUTO_WAR.get() || event.getPlacedBlock().getBlock() != Blocks.TNT
@@ -223,7 +291,7 @@ public class PlayerAggression {
         }
         try {
             BlockPos p = event.getPos();
-            Object v = villageAt(level, p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D, FallConfig.TERRITORY_MARGIN.get());
+            Object v = villageAt(level, p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D);
             if (v != null) {
                 offence(level, player, v, "tnt", FallConfig.TNT_ATTEMPTS.get());
             }
@@ -232,44 +300,18 @@ public class PlayerAggression {
         }
     }
 
+    /** TNT lit by a player in a village's chunks: immediate. */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onJoin(EntityJoinLevelEvent event) {
         if (broken || !FallConfig.AUTO_WAR.get() || !(event.getLevel() instanceof ServerLevel level)
                 || !ModList.get().isLoaded("recruitsvillages")) {
             return;
         }
-        Entity e = event.getEntity();
         try {
-            if (e instanceof PrimedTnt tnt && tnt.getOwner() instanceof ServerPlayer player) {
-                Object v = villageAt(level, tnt.getX(), tnt.getY(), tnt.getZ(), FallConfig.TERRITORY_MARGIN.get());
+            if (event.getEntity() instanceof PrimedTnt tnt && tnt.getOwner() instanceof ServerPlayer player) {
+                Object v = villageAt(level, tnt.getX(), tnt.getY(), tnt.getZ());
                 if (v != null) {
                     offence(level, player, v, "tnt_lit", 1);
-                }
-                return;
-            }
-            // molotov (Hostile Civilization) thrown by a player: where is it heading?
-            if (e instanceof Projectile pr && pr.getOwner() instanceof ServerPlayer player
-                    && BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString().equals("hostile_civilization:molotov_projectile")) {
-                Vec3 from = e.position();
-                Vec3 dir = e.getDeltaMovement();
-                if (dir.lengthSqr() < 1.0E-4D) {
-                    dir = player.getLookAngle();
-                }
-                Vec3 to = from.add(dir.normalize().scale(FallConfig.MOLOTOV_RANGE.get()));
-                RV.init();
-                for (Object f : RV.factions(RV.data(level.getServer()))) {
-                    if (RV.player(f)) {
-                        continue;
-                    }
-                    AABB box = RV.box(f);
-                    if (box == null) {
-                        continue;
-                    }
-                    AABB big = box.inflate(8);
-                    if (big.contains(from) || big.clip(from, to).isPresent()) {
-                        offence(level, player, f, "molotov", 1);
-                        return;
-                    }
                 }
             }
         } catch (Throwable t) {

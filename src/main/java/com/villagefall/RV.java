@@ -138,6 +138,26 @@ final class RV {
         fSetCivProg.invoke(f, 0);
     }
 
+    static boolean claimsBroken = false;
+
+    /** UUID of the Recruits claim that covers the chunk of the position, or null. */
+    static UUID claimAt(ServerLevel level, BlockPos p) {
+        if (claimsBroken) {
+            return null;
+        }
+        try {
+            Class<?> ce = Class.forName("com.talhanation.recruits.ClaimEvents");
+            Object cm = ce.getField("recruitsClaimManager").get(null);
+            Object claim = cm.getClass().getMethod("getClaim", net.minecraft.world.level.ChunkPos.class)
+                    .invoke(cm, new net.minecraft.world.level.ChunkPos(p));
+            return claim == null ? null : (UUID) claim.getClass().getMethod("getUUID").invoke(claim);
+        } catch (Throwable t) {
+            claimsBroken = true;
+            LOG.warn("[VillageFall] claims unavailable, falling back to village boxes: {}", t.toString());
+            return null;
+        }
+    }
+
     static net.minecraft.world.phys.AABB box(Object f) {
         try {
             return (net.minecraft.world.phys.AABB) villageBox.invoke(null, f);
