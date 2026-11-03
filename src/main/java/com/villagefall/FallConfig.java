@@ -27,8 +27,6 @@ public class FallConfig {
     public static final ForgeConfigSpec.IntValue CAMPFIRE_COOLDOWN_SECONDS;
     public static final ForgeConfigSpec.BooleanValue FIREFIGHT;
     public static final ForgeConfigSpec.IntValue FIREFIGHT_RANGE;
-    public static final ForgeConfigSpec.BooleanValue FIREFIGHT;
-    public static final ForgeConfigSpec.IntValue FIREFIGHT_RANGE;
     public static final ForgeConfigSpec.BooleanValue RETREAT_ENABLED;
     public static final ForgeConfigSpec.IntValue RETREAT_PERCENT;
     public static final ForgeConfigSpec.IntValue LEADER_FLAG_MINUTES;

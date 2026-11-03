@@ -8,6 +8,7 @@ import net.minecraftforge.fml.config.ModConfig;
 @Mod(VillageFall.MODID)
 public class VillageFall {
     public static final String MODID = "villagefall";
+    public static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("villagefall");
 
     public VillageFall() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, FallConfig.SPEC);
