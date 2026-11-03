@@ -21,6 +21,9 @@ public class FallConfig {
     public static final ForgeConfigSpec.IntValue ARSON_WINDOW_SECONDS;
     public static final ForgeConfigSpec.IntValue TERRITORY_MARGIN;
     public static final ForgeConfigSpec.IntValue MOLOTOV_RANGE;
+    public static final ForgeConfigSpec.IntValue FLAME_ATTEMPTS;
+    public static final ForgeConfigSpec.IntValue TNT_ATTEMPTS;
+    public static final ForgeConfigSpec.IntValue HIT_ATTEMPTS;
     public static final ForgeConfigSpec.BooleanValue CAMPFIRES;
     public static final ForgeConfigSpec.BooleanValue CAMPFIRE_REQUIRE_SNOW;
     public static final ForgeConfigSpec.IntValue CAMPFIRE_MAX_NEAR;
@@ -66,6 +69,12 @@ public class FallConfig {
                 .defineInRange("territoryMargin", 24, 0, 128);
         MOLOTOV_RANGE = b.comment("A molotov thrown by a player counts as an attack if its flight line crosses a village's territory within this distance (blocks).")
                 .defineInRange("molotovRange", 80, 8, 256);
+        FLAME_ATTEMPTS = b.comment("Seconds of using a flamethrower at a village (within the arson window) that count as an attack. Bazooka shots and molotovs count at once.")
+                .defineInRange("flamethrowerSeconds", 3, 1, 100);
+        TNT_ATTEMPTS = b.comment("TNT blocks placed on a village's territory (within the window) that count as an attack. Lighting TNT counts at once.")
+                .defineInRange("tntPlaced", 3, 1, 100);
+        HIT_ATTEMPTS = b.comment("Hits on ordinary villagers of a village (within the window) that count as an attack. Hitting its soldiers counts at once.")
+                .defineInRange("villagerHits", 3, 1, 100);
         b.pop();
         b.push("winter");
         CAMPFIRES = b.comment("In winter snowfall ordinary villagers light campfires near their gathering place.")
@@ -90,7 +99,7 @@ public class FallConfig {
                 .defineInRange("belowPercent", 30, 1, 99);
         LEADER_FLAG_MINUTES = b.comment("How long after the leader's death the village may still retreat.")
                 .defineInRange("leaderFlagMinutes", 15, 1, 120);
-        REFUGE_RANGE = b.comment("Survivors run to the nearest other village within this many blocks and join it.")
+        REFUGE_RANGE = b.comment("Survivors who hold out 5 more seconds are teleported to the nearest other village within this many blocks and join it.")
                 .defineInRange("refugeRange", 800, 64, 4000);
         FLEE_DISTANCE = b.comment("With no village in range, survivors run this many blocks away and the recruits become free mercenaries.")
                 .defineInRange("fleeDistance", 200, 50, 600);

@@ -343,6 +343,23 @@ public class FallManager {
                 alive.add(e);
             }
         }
+        if (rt.destVillage != null) {
+            // survivors who held out 5 more seconds are teleported into the nearest village and join it
+            if (elapsed < 100L && chunkLoaded && !alive.isEmpty()) {
+                return;
+            }
+            level.getChunk(rt.dest.getX() >> 4, rt.dest.getZ() >> 4);
+            for (Entity e : alive) {
+                BlockPos t = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                        rt.dest.offset(level.random.nextInt(9) - 4, 0, level.random.nextInt(9) - 4));
+                e.teleportTo(t.getX() + 0.5D, t.getY(), t.getZ() + 0.5D);
+                if (e instanceof Mob mob) {
+                    mob.getNavigation().stop();
+                }
+            }
+            finishRetreat(server, level, data, factions, f, rt, alive, chunkLoaded);
+            return;
+        }
         for (Entity e : alive) {
             double dx = e.getX() - rt.dest.getX();
             double dz = e.getZ() - rt.dest.getZ();

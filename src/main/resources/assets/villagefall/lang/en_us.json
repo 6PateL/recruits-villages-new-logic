@@ -6,5 +6,15 @@
   "msg.villagefall.mercenaries": "\"%s\" is no more. %s of its soldiers wander off as mercenaries.",
   "msg.villagefall.auto_war": "You attacked the village \"%s\": war for conquest declared.",
   "msg.villagefall.auto_war_failed": "You attacked the village \"%s\", but war cannot be declared right now (a war is on, cooldown or allies).",
-  "msg.villagefall.warn_fire": "You are setting fire to \"%s\" (%s/%s): the villagers are upset!"
+  "msg.villagefall.warn_fire": "You are setting fire to \"%s\" (%s/%s): the villagers are upset!",
+  "msg.villagefall.warn_flame": "You are burning \"%s\" with a flamethrower (%s/%s): the villagers are furious!",
+  "msg.villagefall.warn_tnt": "You are planting TNT in \"%s\" (%s/%s): the villagers are furious!",
+  "msg.villagefall.warn_hit": "You are hitting the villagers of \"%s\" (%s/%s): they are furious!",
+  "msg.villagefall.alert_fire": "Arson in \"%s\"! The village treats you as an enemy!",
+  "msg.villagefall.alert_flame": "Flamethrower against \"%s\"! The village treats you as an enemy!",
+  "msg.villagefall.alert_bazooka": "Bazooka fired at \"%s\"! Instant aggression!",
+  "msg.villagefall.alert_molotov": "Molotov thrown at \"%s\"! Instant aggression!",
+  "msg.villagefall.alert_tnt": "TNT on the land of \"%s\"! The village treats you as an enemy!",
+  "msg.villagefall.alert_tnt_lit": "You lit TNT near \"%s\"! Instant aggression!",
+  "msg.villagefall.alert_hit": "Attack on the villagers of \"%s\"! The village treats you as an enemy!"
 }

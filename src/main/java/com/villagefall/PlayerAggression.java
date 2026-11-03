@@ -47,19 +47,86 @@ public class PlayerAggression {
     public void onHurt(LivingHurtEvent event) {
         if (broken || !FallConfig.AUTO_WAR.get() || !(event.getEntity().level() instanceof ServerLevel level)
                 || !(event.getSource().getEntity() instanceof ServerPlayer player)
-                || !event.getEntity().getClass().getName().startsWith("com.talhanation.recruits.")
                 || !ModList.get().isLoaded("recruitsvillages")) {
+            return;
+        }
+        boolean soldier = event.getEntity().getClass().getName().startsWith("com.talhanation.recruits.");
+        boolean villager = event.getEntity() instanceof net.minecraft.world.entity.npc.Villager;
+        if (!soldier && !villager) {
             return;
         }
         try {
             RV.init();
             UUID vid = RV.factionOf(event.getEntity().getUUID());
             if (vid == null) {
-                return; // not a village soldier
+                return; // not a village member
             }
             Object target = RV.faction(RV.data(level.getServer()), vid);
-            if (target != null) {
-                attack(level, player, target);
+            if (target != null && !RV.player(target)) {
+                offence(level, player, target, "hit", soldier ? 1 : FallConfig.HIT_ATTEMPTS.get());
+            }
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
+    // ------------------------------------------------------------------ weapons
+
+    private static final net.minecraft.resources.ResourceLocation BAZOOKA = new net.minecraft.resources.ResourceLocation("hostile_civilization", "bazooka");
+    private static final net.minecraft.resources.ResourceLocation FLAMETHROWER = new net.minecraft.resources.ResourceLocation("fromanotherworld", "flamethrower_mk_1");
+
+    /** Non-player village whose territory the player's line of sight crosses within {@code range}, or null. */
+    private Object villageInSight(ServerLevel level, ServerPlayer player, double range) throws Exception {
+        RV.init();
+        Vec3 from = player.getEyePosition();
+        Vec3 to = from.add(player.getLookAngle().scale(range));
+        for (Object f : RV.factions(RV.data(level.getServer()))) {
+            if (RV.player(f)) {
+                continue;
+            }
+            AABB box = RV.box(f);
+            if (box != null) {
+                AABB big = box.inflate(8);
+                if (big.contains(from) || big.clip(from, to).isPresent()) {
+                    return f;
+                }
+            }
+        }
+        return null;
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public void onUseItem(PlayerInteractEvent.RightClickItem event) {
+        if (broken || !FallConfig.AUTO_WAR.get() || !(event.getEntity() instanceof ServerPlayer player)
+                || !(event.getLevel() instanceof ServerLevel level) || !ModList.get().isLoaded("recruitsvillages")) {
+            return;
+        }
+        var item = event.getItemStack().getItem();
+        if (!BuiltInRegistries.ITEM.getKey(item).equals(BAZOOKA) || player.getCooldowns().isOnCooldown(item)) {
+            return;
+        }
+        try {
+            Object v = villageInSight(level, player, 128.0D);
+            if (v != null) {
+                offence(level, player, v, "bazooka", 1);
+            }
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public void onFlame(net.minecraftforge.event.entity.living.LivingEntityUseItemEvent.Tick event) {
+        if (broken || !FallConfig.AUTO_WAR.get() || !(event.getEntity() instanceof ServerPlayer player)
+                || !(event.getEntity().level() instanceof ServerLevel level) || event.getDuration() % 20 != 0
+                || !BuiltInRegistries.ITEM.getKey(event.getItem().getItem()).equals(FLAMETHROWER)
+                || !ModList.get().isLoaded("recruitsvillages")) {
+            return;
+        }
+        try {
+            Object v = villageInSight(level, player, 24.0D);
+            if (v != null) {
+                offence(level, player, v, "flame", FallConfig.FLAME_ATTEMPTS.get());
             }
         } catch (Throwable t) {
             fail(t);
@@ -140,23 +207,7 @@ public class PlayerAggression {
             if (v == null) {
                 return;
             }
-            long now = level.getGameTime();
-            String key = player.getUUID() + "|" + RV.id(v);
-            int[] st = arson.computeIfAbsent(key, k -> new int[]{0, (int) now});
-            if (now - st[1] > FallConfig.ARSON_WINDOW_SECONDS.get() * 20L) {
-                st[0] = 0;
-                st[1] = (int) now;
-            }
-            st[0]++;
-            react(level, player, v, false);
-            player.displayClientMessage(Component.translatable("msg.villagefall.warn_fire", RV.name(v), st[0],
-                    FallConfig.ARSON_ATTEMPTS.get()), true);
-            if (st[0] >= FallConfig.ARSON_ATTEMPTS.get()) {
-                st[0] = 0;
-                st[1] = (int) now;
-                LOG.info("[VillageFall] {} is setting fire to '{}'", player.getName().getString(), RV.name(v));
-                attack(level, player, v);
-            }
+            offence(level, player, v, "fire", FallConfig.ARSON_ATTEMPTS.get());
         } catch (Throwable t) {
             fail(t);
         }
@@ -174,8 +225,7 @@ public class PlayerAggression {
             BlockPos p = event.getPos();
             Object v = villageAt(level, p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D, FallConfig.TERRITORY_MARGIN.get());
             if (v != null) {
-                LOG.info("[VillageFall] {} placed TNT on the territory of '{}'", player.getName().getString(), RV.name(v));
-                attack(level, player, v);
+                offence(level, player, v, "tnt", FallConfig.TNT_ATTEMPTS.get());
             }
         } catch (Throwable t) {
             fail(t);
@@ -193,7 +243,7 @@ public class PlayerAggression {
             if (e instanceof PrimedTnt tnt && tnt.getOwner() instanceof ServerPlayer player) {
                 Object v = villageAt(level, tnt.getX(), tnt.getY(), tnt.getZ(), FallConfig.TERRITORY_MARGIN.get());
                 if (v != null) {
-                    attack(level, player, v);
+                    offence(level, player, v, "tnt_lit", 1);
                 }
                 return;
             }
@@ -217,8 +267,7 @@ public class PlayerAggression {
                     }
                     AABB big = box.inflate(8);
                     if (big.contains(from) || big.clip(from, to).isPresent()) {
-                        LOG.info("[VillageFall] {} threw a molotov towards '{}'", player.getName().getString(), RV.name(f));
-                        attack(level, player, f);
+                        offence(level, player, f, "molotov", 1);
                         return;
                     }
                 }
@@ -229,6 +278,32 @@ public class PlayerAggression {
     }
 
     // ------------------------------------------------------------------ the rule
+
+    /**
+     * One unlawful act against a village. With {@code threshold} 1 the reaction is immediate; otherwise the player
+     * gets a warning (n/threshold) and the attack is declared once the threshold is reached within the window.
+     */
+    private void offence(ServerLevel level, ServerPlayer player, Object village, String kind, int threshold) throws Exception {
+        UUID vid = RV.id(village);
+        long now = level.getGameTime();
+        String key = player.getUUID() + "|" + vid + "|" + kind;
+        int[] st = arson.computeIfAbsent(key, k -> new int[]{0, (int) now});
+        if (now - st[1] > FallConfig.ARSON_WINDOW_SECONDS.get() * 20L) {
+            st[0] = 0;
+            st[1] = (int) now;
+        }
+        st[0]++;
+        if (threshold > 1 && st[0] < threshold) {
+            react(level, player, village, false);
+            player.displayClientMessage(Component.translatable("msg.villagefall.warn_" + kind, RV.name(village), st[0], threshold), true);
+            return;
+        }
+        st[0] = 0;
+        st[1] = (int) now;
+        LOG.info("[VillageFall] {} commits '{}' against '{}'", player.getName().getString(), kind, RV.name(village));
+        player.displayClientMessage(Component.translatable("msg.villagefall.alert_" + kind, RV.name(village)), true);
+        attack(level, player, village);
+    }
 
     private void attack(ServerLevel level, ServerPlayer player, Object target) throws Exception {
         UUID vid = RV.id(target);
@@ -274,8 +349,9 @@ public class PlayerAggression {
                 }
                 level.broadcastEntityEvent(vill, (byte) 13); // angry particles
                 vill.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.HURT_BY_ENTITY, player);
-                if (vill.tickCount % 40 == 0) {
-                    vill.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_NO, 1.0F, vill.getVoicePitch());
+                if (hostile || vill.tickCount % 40 == 0) {
+                    // low-pitched, angry-sounding "no" of the villagers
+                    vill.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_NO, 1.2F, hostile ? 0.6F : vill.getVoicePitch());
                 }
             } else if (hostile && (e instanceof net.minecraft.world.entity.animal.IronGolem
                     || e.getClass().getName().startsWith("com.talhanation.recruits."))
