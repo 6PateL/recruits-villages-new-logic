@@ -85,15 +85,13 @@ public class PlayerAggression {
             if (RV.player(f)) {
                 continue;
             }
-            if (claim != null) {
-                if (claim.equals(RV.claimAt(level, RV.center(f)))) {
-                    return f;
-                }
-            } else if (RV.claimsBroken) {
-                AABB box = RV.box(f);
-                if (box != null && box.contains(x, y, z)) {
-                    return f;
-                }
+            if (claim != null && claim.equals(RV.claimAt(level, RV.center(f)))) {
+                return f;
+            }
+            // no claim there (or a village without one): the village's own box counts as its land
+            AABB box = RV.box(f);
+            if (box != null && box.contains(x, y, z)) {
+                return f;
             }
         }
         return null;
@@ -324,7 +322,10 @@ public class PlayerAggression {
                     Object v = villageAt(level, fp.getX(), fp.getY(), fp.getZ());
                     if (v == null) v = villageAt(level, ahead.x, ahead.y, ahead.z);
                     if (v == null) v = villageMemberNear(level, ahead, 6.0D);
-                    if (v != null && !defending(level, fp.position())) {
+                    boolean def = v != null && defending(level, fp.position());
+                    LOG.info("[VillageFall] flame by {}: village={} defending={}", fp.getName().getString(),
+                            v == null ? "none" : RV.name(v), def);
+                    if (v != null && !def) {
                         offence(level, fp, v, "flame", 1);
                     }
                 }
