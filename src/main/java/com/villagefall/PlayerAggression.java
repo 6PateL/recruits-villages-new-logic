@@ -260,6 +260,7 @@ public class PlayerAggression {
 
     // ------------------------------------------------------------------ arson, TNT
 
+    private final Map<UUID, Long> lastFlame = new HashMap<>();
     private final Map<String, int[]> arson = new HashMap<>(); // player|village|kind -> {count, window start}
 
     /** Fire is lit by a player in a village's chunks (flint and steel, fire charge, lava). */
@@ -311,6 +312,24 @@ public class PlayerAggression {
             return;
         }
         try {
+            // flamethrower puff (From Another World): independent of use-item events
+            if (event.getEntity() instanceof Projectile fire && fire.getOwner() instanceof ServerPlayer fp
+                    && BuiltInRegistries.ENTITY_TYPE.getKey(fire.getType()).toString().equals("fromanotherworld:flamethrower_fire")) {
+                long now = level.getGameTime();
+                Long last = lastFlame.get(fp.getUUID());
+                if (last == null || now - last >= 10L) {
+                    lastFlame.put(fp.getUUID(), now);
+                    Vec3 at = fire.position();
+                    Vec3 ahead = at.add(fp.getLookAngle().scale(6.0D));
+                    Object v = villageAt(level, fp.getX(), fp.getY(), fp.getZ());
+                    if (v == null) v = villageAt(level, ahead.x, ahead.y, ahead.z);
+                    if (v == null) v = villageMemberNear(level, ahead, 6.0D);
+                    if (v != null && !defending(level, fp.position())) {
+                        offence(level, fp, v, "flame", 1);
+                    }
+                }
+                return;
+            }
             if (event.getEntity() instanceof PrimedTnt tnt && tnt.getOwner() instanceof ServerPlayer player) {
                 Object v = villageAt(level, tnt.getX(), tnt.getY(), tnt.getZ());
                 if (v != null) {
