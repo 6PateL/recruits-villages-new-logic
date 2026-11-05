@@ -247,6 +247,9 @@ public class PlayerAggression {
                 }
                 AABB box = RV.box(f);
                 if (box != null && box.contains(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D)) {
+                    if (ownVillage(level, player, f)) {
+                        return;
+                    }
                     attack(level, player, f);
                     return;
                 }
@@ -348,7 +351,16 @@ public class PlayerAggression {
      * One unlawful act against a village. With {@code threshold} 1 the reaction is immediate; otherwise the player
      * gets a warning (n/threshold) and the attack is declared once the threshold is reached within the window.
      */
+    /** The player belongs to this village's faction (founded it or joined it): it is his own land. */
+    private boolean ownVillage(ServerLevel level, ServerPlayer player, Object village) throws Exception {
+        Object own = RV.factionOfPlayer(level, player);
+        return own != null && RV.factionGroupId(own).equals(RV.factionGroupId(village));
+    }
+
     private void offence(ServerLevel level, ServerPlayer player, Object village, String kind, int threshold) throws Exception {
+        if (ownVillage(level, player, village)) {
+            return; // arson, TNT, hits in the faction you belong to are no offence
+        }
         UUID vid = RV.id(village);
         long now = level.getGameTime();
         String key = player.getUUID() + "|" + vid + "|" + kind;
