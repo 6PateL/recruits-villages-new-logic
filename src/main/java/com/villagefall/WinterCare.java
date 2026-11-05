@@ -32,7 +32,7 @@ public class WinterCare {
     @SubscribeEvent
     public void onTick(net.minecraftforge.event.entity.living.LivingEvent.LivingTickEvent event) {
         if (!(event.getEntity() instanceof Villager v) || v.level().isClientSide || !FallConfig.CAMPFIRES.get()
-                || (v.tickCount + v.getId()) % 100 != 0 || v.isSleeping() || v.getPersistentData().getBoolean("trainrecruits_gunner")
+                || (v.tickCount + v.getId()) % 100 != 0 || v.isSleeping() || v.getPersistentData().getBoolean("trainrecruits_gunner") || v.getPersistentData().getBoolean("trainrecruits_follow")
                 || !(v.level() instanceof ServerLevel level)) {
             return;
         }

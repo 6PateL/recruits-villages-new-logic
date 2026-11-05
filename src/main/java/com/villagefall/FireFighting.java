@@ -42,7 +42,7 @@ public class FireFighting {
     @SubscribeEvent
     public void onVillager(LivingEvent.LivingTickEvent event) {
         if (!(event.getEntity() instanceof Villager v) || !FallConfig.FIREFIGHT.get() || v.level().isClientSide
-                || (v.tickCount + v.getId()) % 20 != 0 || v.isSleeping() || v.getPersistentData().getBoolean("trainrecruits_gunner")
+                || (v.tickCount + v.getId()) % 20 != 0 || v.isSleeping() || v.getPersistentData().getBoolean("trainrecruits_gunner") || v.getPersistentData().getBoolean("trainrecruits_follow")
                 || !(v.level() instanceof ServerLevel level)) {
             return;
         }
