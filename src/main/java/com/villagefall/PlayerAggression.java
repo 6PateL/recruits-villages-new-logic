@@ -20,7 +20,9 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -247,7 +249,7 @@ public class PlayerAggression {
                 }
                 AABB box = RV.box(f);
                 if (box != null && box.contains(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D)) {
-                    if (ownVillage(level, player, f)) {
+                    if (ownVillage(level, player, f) || remembered(level, player, f)) {
                         return;
                     }
                     attack(level, player, f);
@@ -262,7 +264,7 @@ public class PlayerAggression {
     // ------------------------------------------------------------------ arson, TNT
 
     private final Map<UUID, Long> lastFlame = new HashMap<>();
-    private final Map<String, int[]> arson = new HashMap<>(); // player|village|kind -> {count, window start}
+    private static final Map<String, int[]> arson = new HashMap<>(); // player|village|kind -> {count, window start}
 
     /** Fire is lit by a player in a village's chunks (flint and steel, fire charge, lava). */
     @SubscribeEvent(priority = EventPriority.HIGH)
@@ -357,9 +359,51 @@ public class PlayerAggression {
         return own != null && RV.factionGroupId(own).equals(RV.factionGroupId(village));
     }
 
+    /** Pending warnings of the player (kind, count) that have not reached the attack threshold yet. */
+    static List<String[]> warnings(ServerLevel level, ServerPlayer player) throws Exception {
+        List<String[]> out = new ArrayList<>();
+        long now = level.getGameTime();
+        long window = FallConfig.ARSON_WINDOW_SECONDS.get() * 20L;
+        String prefix = player.getUUID() + "|";
+        Object data = null;
+        for (Map.Entry<String, int[]> e : arson.entrySet()) {
+            if (!e.getKey().startsWith(prefix) || e.getValue()[0] <= 0 || now - e.getValue()[1] > window) {
+                continue;
+            }
+            String[] parts = e.getKey().split("\\|");
+            if (parts.length < 3) {
+                continue;
+            }
+            if (data == null) {
+                data = RV.data(level.getServer());
+            }
+            Object f = RV.faction(data, UUID.fromString(parts[1]));
+            if (f == null) {
+                continue;
+            }
+            BlockPos c = RV.center(f);
+            out.add(new String[]{RV.name(f), String.valueOf(c.getX()), String.valueOf(c.getZ()),
+                    String.valueOf((window - (now - e.getValue()[1])) / 20L), "1", parts[2] + " " + e.getValue()[0]});
+        }
+        return out;
+    }
+
+    /** The village already holds a grudge: the offence is not counted again, the village just stays hostile. */
+    private boolean remembered(ServerLevel level, ServerPlayer player, Object village) throws Exception {
+        ServerLevel ow = level.getServer().overworld();
+        if (Grudges.get(ow).active(player.getUUID(), RV.id(village), ow.getGameTime())) {
+            react(level, player, village, true);
+            return true;
+        }
+        return false;
+    }
+
     private void offence(ServerLevel level, ServerPlayer player, Object village, String kind, int threshold) throws Exception {
         if (ownVillage(level, player, village)) {
             return; // arson, TNT, hits in the faction you belong to are no offence
+        }
+        if (remembered(level, player, village)) {
+            return;
         }
         UUID vid = RV.id(village);
         long now = level.getGameTime();
@@ -385,6 +429,9 @@ public class PlayerAggression {
     private void attack(ServerLevel level, ServerPlayer player, Object target) throws Exception {
         UUID vid = RV.id(target);
         react(level, player, target, true);
+        ServerLevel ow = level.getServer().overworld();
+        Grudges.get(ow).set(player.getUUID(), vid, RV.name(target), RV.center(target),
+                ow.getGameTime() + FallConfig.GRUDGE_MINUTES.get() * 1200L);
         if (RV.player(target) || RV.atWar(vid)) {
             return;
         }

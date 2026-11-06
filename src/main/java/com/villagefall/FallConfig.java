@@ -36,6 +36,7 @@ public class FallConfig {
     public static final ForgeConfigSpec.IntValue REFUGE_RANGE;
     public static final ForgeConfigSpec.IntValue FLEE_DISTANCE;
     public static final ForgeConfigSpec.IntValue FLEE_SECONDS;
+    public static final ForgeConfigSpec.IntValue GRUDGE_MINUTES;
     public static final ForgeConfigSpec.BooleanValue ARSENAL;
     public static final ForgeConfigSpec.IntValue ARSENAL_MIN_DEFENDERS;
     public static final ForgeConfigSpec.IntValue SHARE_POTATO;
@@ -103,6 +104,10 @@ public class FallConfig {
                 .define("enabled", true);
         FIREFIGHT_RANGE = b.comment("Villagers notice fires within this many blocks.")
                 .defineInRange("range", 14, 4, 48);
+        b.pop();
+        b.push("memory");
+        GRUDGE_MINUTES = b.comment("A village forgets the crimes of a player after this many minutes. While it remembers, new offences in it are not counted again.")
+                .defineInRange("forgetMinutes", 30, 1, 1440);
         b.pop();
         b.push("arsenal");
         ARSENAL = b.comment("A share of the DEFENDERS (soldiers) of every village (own, joined and NPC) carries special weapons.")
