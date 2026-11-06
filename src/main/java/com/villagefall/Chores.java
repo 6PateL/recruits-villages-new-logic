@@ -52,7 +52,7 @@ public class Chores {
             if (repairGolem(level, v, box)) {
                 return;
             }
-            torch(level, v, box);
+            torch(level, v, box, fid);
         } catch (Throwable t) {
             broken = true;
             com.mojang.logging.LogUtils.getLogger().warn("[VillageFall] chores disabled: {}", t.toString());
@@ -82,21 +82,66 @@ public class Chores {
         return true;
     }
 
-    private void torch(ServerLevel level, Villager v, AABB box) {
-        BlockPos base = v.blockPosition();
-        if (level.getBrightness(LightLayer.BLOCK, base) >= 6 || level.getMaxLocalRawBrightness(base) > 7) {
-            return;
+    /** Dark spots of every village (recomputed every 10 s), so villagers light up the WHOLE village, not only their own path. */
+    private record Spots(long time, List<BlockPos> list) {}
+
+    private final java.util.Map<UUID, Spots> spots = new java.util.HashMap<>();
+
+    private static boolean darkSpot(ServerLevel level, BlockPos pos) {
+        return level.isEmptyBlock(pos) && level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP)
+                && level.getBrightness(LightLayer.BLOCK, pos) < 6 && level.getMaxLocalRawBrightness(pos) <= 7;
+    }
+
+    private List<BlockPos> darkSpots(ServerLevel level, UUID fid, AABB box) {
+        long now = level.getGameTime();
+        Spots cached = spots.get(fid);
+        if (cached != null && now - cached.time() < 200L) {
+            return cached.list();
         }
-        for (int i = 0; i < 8; i++) {
-            BlockPos pos = base.offset(level.random.nextInt(9) - 4, level.random.nextInt(3) - 1, level.random.nextInt(9) - 4);
-            if (box.contains(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D) && level.isEmptyBlock(pos)
-                    && level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP)
-                    && level.getBrightness(LightLayer.BLOCK, pos) < 6) {
-                level.setBlock(pos, Blocks.TORCH.defaultBlockState(), 3);
-                v.swing(InteractionHand.MAIN_HAND);
-                level.playSound(null, pos, SoundEvents.WOOD_PLACE, SoundSource.BLOCKS, 0.8F, 1.0F);
-                return;
+        List<BlockPos> list = new java.util.ArrayList<>();
+        int step = 5;
+        for (int x = (int) box.minX; x <= (int) box.maxX && list.size() < 200; x += step) {
+            for (int z = (int) box.minZ; z <= (int) box.maxZ && list.size() < 200; z += step) {
+                if (!level.hasChunkAt(new BlockPos(x, 0, z))) {
+                    continue;
+                }
+                BlockPos pos = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
+                if (pos.getY() >= box.minY - 4 && pos.getY() <= box.maxY + 4 && darkSpot(level, pos)) {
+                    list.add(pos);
+                }
             }
         }
+        spots.put(fid, new Spots(now, list));
+        return list;
+    }
+
+    private void torch(ServerLevel level, Villager v, AABB box, UUID fid) {
+        List<BlockPos> list = darkSpots(level, fid, box);
+        BlockPos best = null;
+        double bd = Double.MAX_VALUE;
+        for (BlockPos p : list) {
+            double d = p.distSqr(v.blockPosition());
+            if (d < bd) {
+                bd = d;
+                best = p;
+            }
+        }
+        if (best == null) {
+            return;
+        }
+        if (!darkSpot(level, best)) {
+            list.remove(best); // somebody already lit it
+            return;
+        }
+        if (bd > 2.5D * 2.5D) {
+            v.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET,
+                    new net.minecraft.world.entity.ai.memory.WalkTarget(best, 0.6F, 1));
+            v.getNavigation().moveTo(best.getX() + 0.5D, best.getY(), best.getZ() + 0.5D, 0.6D);
+            return;
+        }
+        level.setBlock(best, Blocks.TORCH.defaultBlockState(), 3);
+        list.remove(best);
+        v.swing(InteractionHand.MAIN_HAND);
+        level.playSound(null, best, SoundEvents.WOOD_PLACE, SoundSource.BLOCKS, 0.8F, 1.0F);
     }
 }

@@ -81,7 +81,9 @@ public class Arsenal {
                 int want = Math.min(FallConfig.GOLEM_MAX.get(),
                         Math.max(FallConfig.GOLEM_MIN.get(), (pop * FallConfig.GOLEM_PERCENT.get() + 99) / 100));
                 if (golems < want && pop > 0) {
-                    spawnGolem(level, center, box);
+                    boolean ok = spawnGolem(level, center, box);
+                    com.mojang.logging.LogUtils.getLogger().info("[VillageFall] golems of '{}': {}/{}, spawn {}",
+                            RV.name(f), golems, want, ok ? "ok" : "no free spot");
                 }
             }
         }
@@ -94,7 +96,8 @@ public class Arsenal {
 
     /** Horsemen and anybody currently riding get no backpack (and no heavy weapons that need two free hands). */
     private static boolean rider(Mob m) {
-        if (m.isPassenger() || m.getClass().getSimpleName().toLowerCase().contains("horse")) {
+        String n = m.getClass().getSimpleName().toLowerCase();
+        if (m.isPassenger() || n.contains("horse") || n.contains("nomad") || n.contains("messenger") || n.contains("scout")) {
             return true;
         }
         try {
@@ -103,6 +106,12 @@ public class Arsenal {
         } catch (Throwable t) {
             return false;
         }
+    }
+
+    /** Only plain infantry: recruit, shieldman, bowman, crossbowman. */
+    private static boolean footSoldier(Mob m) {
+        String n = m.getClass().getSimpleName();
+        return n.equals("RecruitEntity") || n.equals("RecruitShieldmanEntity") || n.equals("BowmanEntity") || n.equals("CrossBowmanEntity");
     }
 
     private static int share(String kind) {
@@ -141,8 +150,22 @@ public class Arsenal {
         // keep what is already handed out, count it per kind
         for (Mob m : soldiers) {
             String k = m.getPersistentData().getString(TAG);
-            if (!k.isEmpty()) {
+            if ("octo".equals(k) && rider(m)) {
+                // a rider must not wear the backpack: take it off
+                if (m.getItemBySlot(EquipmentSlot.CHEST).getItem() == itemOf("octo")) {
+                    m.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
+                }
+                m.getPersistentData().remove(TAG);
+            } else if (!k.isEmpty()) {
                 equip(m, k); // gives it back when lost
+            }
+        }
+        // riders that got the backpack some other way (or before this rule): off it goes
+        for (Mob m : soldiers) {
+            ItemStack chest = m.getItemBySlot(EquipmentSlot.CHEST);
+            if (rider(m) && !chest.isEmpty()
+                    && "tentaworks".equals(ForgeRegistries.ITEMS.getKey(chest.getItem()).getNamespace())) {
+                m.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
             }
         }
         for (String kind : KINDS) {
@@ -164,6 +187,9 @@ public class Arsenal {
                 }
                 CompoundTag d = m.getPersistentData();
                 if (!d.getString(TAG).isEmpty() || rider(m)) {
+                    continue;
+                }
+                if ("octo".equals(kind) && !footSoldier(m)) {
                     continue;
                 }
                 d.putString(TAG, kind);
@@ -219,7 +245,7 @@ public class Arsenal {
                 }
             }
             default -> {
-                if (!rider(m) && m.getItemBySlot(EquipmentSlot.CHEST).isEmpty()) {
+                if (!rider(m) && footSoldier(m) && m.getItemBySlot(EquipmentSlot.CHEST).isEmpty()) {
                     ItemStack rig = new ItemStack(it);
                     rig.getOrCreateTag().putFloat("Air", 900.0F);
                     m.setItemSlot(EquipmentSlot.CHEST, rig);
@@ -248,24 +274,26 @@ public class Arsenal {
         }
     }
 
-    private void spawnGolem(ServerLevel level, BlockPos center, AABB box) {
-        for (int i = 0; i < 8; i++) {
-            int x = (int) (box.minX + level.random.nextDouble() * (box.maxX - box.minX));
-            int z = (int) (box.minZ + level.random.nextDouble() * (box.maxZ - box.minZ));
+    private boolean spawnGolem(ServerLevel level, BlockPos center, AABB box) {
+        for (int i = 0; i < 24; i++) {
+            int x = i < 16 ? (int) (box.minX + level.random.nextDouble() * (box.maxX - box.minX)) : center.getX() + level.random.nextInt(21) - 10;
+            int z = i < 16 ? (int) (box.minZ + level.random.nextDouble() * (box.maxZ - box.minZ)) : center.getZ() + level.random.nextInt(21) - 10;
             if (!level.hasChunkAt(new BlockPos(x, center.getY(), z))) {
                 continue;
             }
             BlockPos pos = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
-            if (Math.abs(pos.getY() - center.getY()) > 12 || !level.getBlockState(pos.below()).isSolid()
-                    || !level.getBlockState(pos).isAir()) {
+            if (Math.abs(pos.getY() - center.getY()) > 16 || !level.getBlockState(pos.below()).isSolid()
+                    || !level.isEmptyBlock(pos) || !level.isEmptyBlock(pos.above())) {
                 continue;
             }
-            IronGolem g = EntityType.IRON_GOLEM.spawn(level, pos, MobSpawnType.MOB_SUMMONED);
-            if (g != null) {
-                g.setPlayerCreated(false);
-                g.setPersistenceRequired();
+            IronGolem g = new IronGolem(EntityType.IRON_GOLEM, level);
+            g.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, level.random.nextFloat() * 360.0F, 0.0F);
+            g.setPlayerCreated(false);
+            g.setPersistenceRequired();
+            if (level.addFreshEntity(g)) {
+                return true;
             }
-            return;
         }
+        return false;
     }
 }
