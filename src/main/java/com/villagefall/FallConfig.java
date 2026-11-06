@@ -43,6 +43,7 @@ public class FallConfig {
     public static final ForgeConfigSpec.IntValue SHARE_OCTO;
     public static final ForgeConfigSpec.IntValue SHARE_MOLOTOV;
     public static final ForgeConfigSpec.IntValue SHARE_BAZOOKA;
+    public static final ForgeConfigSpec.BooleanValue CHORES;
     public static final ForgeConfigSpec.BooleanValue GOLEMS;
     public static final ForgeConfigSpec.IntValue GOLEM_PERCENT;
     public static final ForgeConfigSpec.IntValue GOLEM_MIN;
@@ -118,6 +119,10 @@ public class FallConfig {
                 .defineInRange("molotovPercent", 10, 0, 100);
         SHARE_BAZOOKA = b.comment("Percent of defenders with a bazooka.")
                 .defineInRange("bazookaPercent", 4, 0, 100);
+        b.pop();
+        b.push("chores");
+        CHORES = b.comment("Ordinary villagers repair the golems of their village and place torches where the village is dark.")
+                .define("enabled", true);
         b.pop();
         b.push("golems");
         GOLEMS = b.comment("Villages (own, joined and NPC) also keep iron golems.")
