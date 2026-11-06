@@ -56,7 +56,8 @@ public class Arsenal {
         for (Object f : RV.factions(data)) {
             BlockPos center = RV.center(f);
             AABB box = RV.box(f);
-            if (center == null || box == null || !level.hasChunkAt(center)) {
+            // only villages whose chunks tick: entities placed into merely "loaded" chunks are invisible to queries and get lost
+            if (center == null || box == null || !level.hasChunkAt(center) || !level.isPositionEntityTicking(center)) {
                 continue;
             }
             AABB area = box.inflate(8.0D, 16.0D, 8.0D);
@@ -81,9 +82,15 @@ public class Arsenal {
                 int want = Math.min(FallConfig.GOLEM_MAX.get(),
                         Math.max(FallConfig.GOLEM_MIN.get(), (pop * FallConfig.GOLEM_PERCENT.get() + 99) / 100));
                 if (golems < want && pop > 0) {
-                    boolean ok = spawnGolem(level, center, box);
-                    com.mojang.logging.LogUtils.getLogger().info("[VillageFall] golems of '{}': {}/{}, spawn {}",
-                            RV.name(f), golems, want, ok ? "ok" : "no free spot");
+                    int made = 0;
+                    for (int k = golems; k < want && k < golems + 4; k++) {
+                        if (!spawnGolem(level, center, box)) {
+                            break;
+                        }
+                        made++;
+                    }
+                    com.mojang.logging.LogUtils.getLogger().info("[VillageFall] golems of '{}': {}/{}, spawned {}",
+                            RV.name(f), golems, want, made);
                 }
             }
         }
@@ -278,7 +285,7 @@ public class Arsenal {
         for (int i = 0; i < 24; i++) {
             int x = i < 16 ? (int) (box.minX + level.random.nextDouble() * (box.maxX - box.minX)) : center.getX() + level.random.nextInt(21) - 10;
             int z = i < 16 ? (int) (box.minZ + level.random.nextDouble() * (box.maxZ - box.minZ)) : center.getZ() + level.random.nextInt(21) - 10;
-            if (!level.hasChunkAt(new BlockPos(x, center.getY(), z))) {
+            if (!level.hasChunkAt(new BlockPos(x, center.getY(), z)) || !level.isPositionEntityTicking(new BlockPos(x, center.getY(), z))) {
                 continue;
             }
             BlockPos pos = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
