@@ -63,3 +63,7 @@
 
 ## Що вважається нападом (територія)
 Тільки в чанках села (клейм Recruits; якщо клейму нема — у межах села): підпал, закладка/підпал ТНТ, постріл з базуки або вогнемет, коли ти стоїш у його чанках, вибух снаряда базуки там чи біля його жителів, молотов, що приземлився в його чанках або біля його жителів, удар по жителях і воїнах. Поблизу села (20 блоків за межами чанків) нічого не рахується. Якщо в радіусі 32 блоків є ворожі моби — це захист і нападом не вважається.
+
+## Arsenal and golems
+- `arsenal`: a percent of the **defenders** (not the population) of every village (own, joined, NPC) gets potato cannons, flamethrowers, molotovs, bazookas and Octo Arms rigs (`tentaworks`, never riders). Shares are in the config.
+- `golems`: every village keeps iron golems: 5% of the population, at least 2 from the start (config).

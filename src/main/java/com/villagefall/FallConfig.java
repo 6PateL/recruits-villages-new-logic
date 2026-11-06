@@ -36,6 +36,17 @@ public class FallConfig {
     public static final ForgeConfigSpec.IntValue REFUGE_RANGE;
     public static final ForgeConfigSpec.IntValue FLEE_DISTANCE;
     public static final ForgeConfigSpec.IntValue FLEE_SECONDS;
+    public static final ForgeConfigSpec.BooleanValue ARSENAL;
+    public static final ForgeConfigSpec.IntValue ARSENAL_MIN_DEFENDERS;
+    public static final ForgeConfigSpec.IntValue SHARE_POTATO;
+    public static final ForgeConfigSpec.IntValue SHARE_FLAME;
+    public static final ForgeConfigSpec.IntValue SHARE_OCTO;
+    public static final ForgeConfigSpec.IntValue SHARE_MOLOTOV;
+    public static final ForgeConfigSpec.IntValue SHARE_BAZOOKA;
+    public static final ForgeConfigSpec.BooleanValue GOLEMS;
+    public static final ForgeConfigSpec.IntValue GOLEM_PERCENT;
+    public static final ForgeConfigSpec.IntValue GOLEM_MIN;
+    public static final ForgeConfigSpec.IntValue GOLEM_MAX;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -91,6 +102,32 @@ public class FallConfig {
                 .define("enabled", true);
         FIREFIGHT_RANGE = b.comment("Villagers notice fires within this many blocks.")
                 .defineInRange("range", 14, 4, 48);
+        b.pop();
+        b.push("arsenal");
+        ARSENAL = b.comment("A share of the DEFENDERS (soldiers) of every village (own, joined and NPC) carries special weapons.")
+                .define("enabled", true);
+        ARSENAL_MIN_DEFENDERS = b.comment("Villages with fewer defenders than this get no special weapons.")
+                .defineInRange("minDefenders", 5, 1, 200);
+        SHARE_POTATO = b.comment("Percent of defenders with a Create potato cannon (rounded up).")
+                .defineInRange("potatoCannonPercent", 8, 0, 100);
+        SHARE_FLAME = b.comment("Percent of defenders with a flamethrower (From Another World).")
+                .defineInRange("flamethrowerPercent", 5, 0, 100);
+        SHARE_OCTO = b.comment("Percent of foot defenders with an Octo Arms tentacle rig (never riders).")
+                .defineInRange("octoRigPercent", 5, 0, 100);
+        SHARE_MOLOTOV = b.comment("Percent of defenders with molotovs.")
+                .defineInRange("molotovPercent", 10, 0, 100);
+        SHARE_BAZOOKA = b.comment("Percent of defenders with a bazooka.")
+                .defineInRange("bazookaPercent", 4, 0, 100);
+        b.pop();
+        b.push("golems");
+        GOLEMS = b.comment("Villages (own, joined and NPC) also keep iron golems.")
+                .define("enabled", true);
+        GOLEM_PERCENT = b.comment("Golems as percent of the whole population (recruits + civilians), rounded up.")
+                .defineInRange("percent", 5, 0, 100);
+        GOLEM_MIN = b.comment("Minimum number of golems: spawned from the very start.")
+                .defineInRange("min", 2, 0, 50);
+        GOLEM_MAX = b.comment("Upper limit of golems per village.")
+                .defineInRange("max", 12, 1, 100);
         b.pop();
         b.push("retreat");
         RETREAT_ENABLED = b.comment("When the leader is killed by an enemy of the village (hostile mobs, barbarians, infected, a player without a faction) and few villagers are left, the survivors flee.")
