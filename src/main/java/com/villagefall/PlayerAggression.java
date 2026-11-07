@@ -485,6 +485,53 @@ public class PlayerAggression {
         }
     }
 
+    /**
+     * A village that remembers the player keeps hating him: soldiers and golems of that village within reach take the
+     * player as a target again whenever they have none (or when he is clearly closer than what they are fighting),
+     * so leaving and coming back does not make him "an annoying fly".
+     */
+    @SubscribeEvent
+    public void onServerTick(net.minecraftforge.event.TickEvent.ServerTickEvent event) {
+        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || broken || event.getServer().getTickCount() % 20 != 0) {
+            return;
+        }
+        try {
+            ServerLevel ow = event.getServer().overworld();
+            Grudges grudges = Grudges.get(ow);
+            long now = ow.getGameTime();
+            for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+                if (player.isCreative() || player.isSpectator() || !(player.level() instanceof ServerLevel level)) {
+                    continue;
+                }
+                java.util.Set<UUID> hostile = grudges.hostile(player.getUUID(), now);
+                if (hostile.isEmpty()) {
+                    continue;
+                }
+                for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
+                        player.getBoundingBox().inflate(32.0D, 16.0D, 32.0D))) {
+                    boolean soldier = m instanceof net.minecraft.world.entity.animal.IronGolem
+                            || m.getClass().getName().startsWith("com.talhanation.recruits.");
+                    if (!soldier || m instanceof net.minecraft.world.entity.npc.Villager) {
+                        continue;
+                    }
+                    UUID fid = RV.memberFaction(m);
+                    if (fid == null || !hostile.contains(fid)) {
+                        continue;
+                    }
+                    net.minecraft.world.entity.LivingEntity cur = m.getTarget();
+                    if (cur == player) {
+                        continue;
+                    }
+                    if (cur == null || !cur.isAlive() || player.distanceToSqr(m) + 16.0D < cur.distanceToSqr(m)) {
+                        m.setTarget(player);
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
     private void fail(Throwable t) {
         broken = true;
         LOG.error("[VillageFall] aggression tracking disabled: {}", t.toString());

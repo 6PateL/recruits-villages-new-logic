@@ -32,6 +32,7 @@ import java.util.UUID;
  */
 public class Arsenal {
     private static final String TAG = "vf_special";
+    private static final String GOLEM_TAG = "vf_golem";
     private static final String[] KINDS = {"bazooka", "flame", "potato", "molotov", "octo"};
     private boolean broken;
 
@@ -60,16 +61,32 @@ public class Arsenal {
             if (center == null || box == null || !level.hasChunkAt(center) || !level.isPositionEntityTicking(center)) {
                 continue;
             }
-            AABB area = box.inflate(8.0D, 16.0D, 8.0D);
+            AABB area = box.inflate(24.0D, 16.0D, 24.0D);
+            AABB wide = box.inflate(80.0D, 32.0D, 80.0D);
+            String tagId = id.toString();
             UUID id = RV.id(f);
             List<Mob> soldiers = new ArrayList<>();
             int golems = 0;
-            for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, area)) {
+            for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, wide)) {
                 if (!e.isAlive()) {
                     continue;
                 }
-                if (e instanceof IronGolem) {
-                    golems++;
+                if (e instanceof IronGolem g) {
+                    boolean mine = tagId.equals(g.getPersistentData().getString(GOLEM_TAG));
+                    if (mine) {
+                        golems++;
+                        // a golem wandering off is brought back to its village
+                        if (g.position().distanceToSqr(center.getX(), center.getY(), center.getZ()) > 40.0D * 40.0D && g.getTarget() == null) {
+                            BlockPos back = homeSpot(level, center, box);
+                            if (back != null) {
+                                g.teleportTo(back.getX() + 0.5D, back.getY(), back.getZ() + 0.5D);
+                            }
+                        }
+                    } else if (area.contains(g.position())) {
+                        golems++;
+                    }
+                } else if (!area.contains(e.position())) {
+                    continue;
                 } else if (e instanceof Mob m && isRecruitsSoldier(m) && RV.tracked(m.getUUID())) {
                     soldiers.add(m);
                 }
@@ -84,7 +101,7 @@ public class Arsenal {
                 if (golems < want && pop > 0) {
                     int made = 0;
                     for (int k = golems; k < want && k < golems + 4; k++) {
-                        if (!spawnGolem(level, center, box)) {
+                        if (!spawnGolem(level, center, box, id)) {
                             break;
                         }
                         made++;
@@ -93,6 +110,38 @@ public class Arsenal {
                             RV.name(f), golems, want, made);
                 }
             }
+        }
+    }
+
+    private BlockPos homeSpot(ServerLevel level, BlockPos center, AABB box) {
+        for (int i = 0; i < 12; i++) {
+            int x = center.getX() + level.random.nextInt(17) - 8;
+            int z = center.getZ() + level.random.nextInt(17) - 8;
+            BlockPos pos = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
+            if (level.hasChunkAt(pos) && level.isEmptyBlock(pos) && level.getBlockState(pos.below()).isSolid()) {
+                return pos;
+            }
+        }
+        return null;
+    }
+
+    @SubscribeEvent
+    public void onGolemDeath(net.minecraftforge.event.entity.living.LivingDeathEvent event) {
+        if (event.getEntity() instanceof IronGolem g && !g.getPersistentData().getString(GOLEM_TAG).isEmpty()) {
+            com.mojang.logging.LogUtils.getLogger().info("[VillageFall] village golem died at {} ({} by {})",
+                    g.blockPosition().toShortString(), event.getSource().getMsgId(),
+                    event.getSource().getEntity() == null ? "nobody" : event.getSource().getEntity().getName().getString());
+        }
+    }
+
+    @SubscribeEvent
+    public void onGolemLeave(net.minecraftforge.event.entity.EntityLeaveLevelEvent event) {
+        if (!event.getLevel().isClientSide && event.getEntity() instanceof IronGolem g
+                && !g.getPersistentData().getString(GOLEM_TAG).isEmpty() && g.isAlive() && g.getRemovalReason() != null
+                && g.getRemovalReason() != net.minecraft.world.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK
+                && g.getRemovalReason() != net.minecraft.world.entity.Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
+            com.mojang.logging.LogUtils.getLogger().info("[VillageFall] village golem removed at {}: {}",
+                    g.blockPosition().toShortString(), g.getRemovalReason());
         }
     }
 
@@ -281,7 +330,7 @@ public class Arsenal {
         }
     }
 
-    private boolean spawnGolem(ServerLevel level, BlockPos center, AABB box) {
+    private boolean spawnGolem(ServerLevel level, BlockPos center, AABB box, UUID fid) {
         for (int i = 0; i < 24; i++) {
             int x = i < 16 ? (int) (box.minX + level.random.nextDouble() * (box.maxX - box.minX)) : center.getX() + level.random.nextInt(21) - 10;
             int z = i < 16 ? (int) (box.minZ + level.random.nextDouble() * (box.maxZ - box.minZ)) : center.getZ() + level.random.nextInt(21) - 10;
@@ -297,6 +346,8 @@ public class Arsenal {
             g.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, level.random.nextFloat() * 360.0F, 0.0F);
             g.setPlayerCreated(false);
             g.setPersistenceRequired();
+            g.restrictTo(center, 32);
+            g.getPersistentData().putString(GOLEM_TAG, fid.toString());
             if (level.addFreshEntity(g)) {
                 return true;
             }

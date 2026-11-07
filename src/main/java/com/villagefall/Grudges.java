@@ -69,6 +69,20 @@ public class Grudges extends SavedData {
         return true;
     }
 
+    /** Villages that are hostile to the player right now. */
+    java.util.Set<UUID> hostile(UUID player, long now) {
+        java.util.Set<UUID> out = new java.util.HashSet<>();
+        Map<UUID, Entry> m = data.get(player);
+        if (m != null) {
+            for (Map.Entry<UUID, Entry> e : m.entrySet()) {
+                if (e.getValue().until() > now) {
+                    out.add(e.getKey());
+                }
+            }
+        }
+        return out;
+    }
+
     void set(UUID player, UUID village, String name, BlockPos center, long until) {
         data.computeIfAbsent(player, k -> new HashMap<>())
                 .put(village, new Entry(name, center.getX(), center.getZ(), until));

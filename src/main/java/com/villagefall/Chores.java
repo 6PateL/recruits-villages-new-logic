@@ -34,7 +34,7 @@ public class Chores {
     @SubscribeEvent
     public void onVillager(LivingEvent.LivingTickEvent event) {
         if (!(event.getEntity() instanceof Villager v) || broken || !FallConfig.CHORES.get() || v.level().isClientSide
-                || (v.tickCount + v.getId()) % 60 != 0 || v.isSleeping() || mobilised(v)
+                || (v.tickCount + v.getId()) % 60 != 0 || mobilised(v) || TorchGoal.busy(v)
                 || !(v.level() instanceof ServerLevel level) || !ModList.get().isLoaded("recruitsvillages")) {
             return;
         }
@@ -49,7 +49,12 @@ public class Chores {
             if (box == null || !box.inflate(4.0D).contains(v.position())) {
                 return;
             }
-            if (repairGolem(level, v, box)) {
+            if (v.isSleeping()) {
+                // torches first, then sleep: wake up only if the village has unlit spots and a free hand is needed
+                if (!hasWork(level, fid, box)) {
+                    return;
+                }
+            } else if (repairGolem(level, v, box)) {
                 return;
             }
             torch(level, v, box, fid);
@@ -115,11 +120,21 @@ public class Chores {
         return list;
     }
 
+    private boolean hasWork(ServerLevel level, UUID fid, AABB box) {
+        return TorchGoal.workers(fid) < 2 && !darkSpots(level, fid, box).isEmpty();
+    }
+
     private void torch(ServerLevel level, Villager v, AABB box, UUID fid) {
+        if (TorchGoal.workers(fid) >= 2) {
+            return; // two lamplighters per village at a time, the rest go about their day
+        }
         List<BlockPos> list = darkSpots(level, fid, box);
         BlockPos best = null;
         double bd = Double.MAX_VALUE;
         for (BlockPos p : list) {
+            if (TorchGoal.claimed(p)) {
+                continue;
+            }
             double d = p.distSqr(v.blockPosition());
             if (d < bd) {
                 bd = d;
@@ -133,15 +148,7 @@ public class Chores {
             list.remove(best); // somebody already lit it
             return;
         }
-        if (bd > 2.5D * 2.5D) {
-            v.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET,
-                    new net.minecraft.world.entity.ai.memory.WalkTarget(best, 0.6F, 1));
-            v.getNavigation().moveTo(best.getX() + 0.5D, best.getY(), best.getZ() + 0.5D, 0.6D);
-            return;
-        }
-        level.setBlock(best, Blocks.TORCH.defaultBlockState(), 3);
         list.remove(best);
-        v.swing(InteractionHand.MAIN_HAND);
-        level.playSound(null, best, SoundEvents.WOOD_PLACE, SoundSource.BLOCKS, 0.8F, 1.0F);
+        TorchGoal.start(level, v, best, fid);
     }
 }
