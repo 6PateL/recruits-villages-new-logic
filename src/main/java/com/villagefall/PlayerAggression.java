@@ -54,22 +54,39 @@ public class PlayerAggression {
         }
         boolean soldier = event.getEntity().getClass().getName().startsWith("com.talhanation.recruits.");
         boolean villager = event.getEntity() instanceof net.minecraft.world.entity.npc.Villager;
-        if (!soldier && !villager) {
+        boolean golem = event.getEntity() instanceof net.minecraft.world.entity.animal.IronGolem
+                && !event.getEntity().getPersistentData().getString(Arsenal.GOLEM_TAG).isEmpty();
+        if (!soldier && !villager && !golem) {
             return;
         }
         try {
             RV.init();
-            UUID vid = RV.memberFaction(event.getEntity());
+            UUID vid = factionOf(event.getEntity());
             if (vid == null) {
                 return; // not a village member
             }
             Object target = RV.faction(RV.data(level.getServer()), vid);
             if (target != null && !RV.player(target)) {
-                offence(level, player, target, "hit", soldier ? 1 : FallConfig.HIT_ATTEMPTS.get());
+                offence(level, player, target, "hit", soldier || golem ? 1 : FallConfig.HIT_ATTEMPTS.get());
             }
         } catch (Throwable t) {
             fail(t);
         }
+    }
+
+    /** Faction of a village member: RV tag for villagers/soldiers, our own tag for the village's golems. */
+    static UUID factionOf(net.minecraft.world.entity.Entity e) {
+        if (e instanceof net.minecraft.world.entity.animal.IronGolem) {
+            String t = e.getPersistentData().getString(Arsenal.GOLEM_TAG);
+            if (!t.isEmpty()) {
+                try {
+                    return UUID.fromString(t);
+                } catch (IllegalArgumentException ignored) {
+                    // fall through
+                }
+            }
+        }
+        return RV.memberFaction(e);
     }
 
     // ------------------------------------------------------------------ territory helpers
@@ -105,8 +122,9 @@ public class PlayerAggression {
         for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
                 new AABB(pos, pos).inflate(r))) {
             if (e instanceof net.minecraft.world.entity.npc.Villager
+                    || e instanceof net.minecraft.world.entity.animal.IronGolem
                     || e.getClass().getName().startsWith("com.talhanation.recruits.")) {
-                UUID vid = RV.memberFaction(e);
+                UUID vid = factionOf(e);
                 if (vid != null) {
                     Object f = RV.faction(RV.data(level.getServer()), vid);
                     if (f != null && !RV.player(f)) {
@@ -479,7 +497,7 @@ public class PlayerAggression {
                 }
             } else if (hostile && (e instanceof net.minecraft.world.entity.animal.IronGolem
                     || e.getClass().getName().startsWith("com.talhanation.recruits."))
-                    && vid.equals(RV.memberFaction(e)) && e instanceof net.minecraft.world.entity.Mob m) {
+                    && vid.equals(factionOf(e)) && e instanceof net.minecraft.world.entity.Mob m) {
                 m.setTarget(player);
             }
         }
@@ -514,7 +532,7 @@ public class PlayerAggression {
                     if (!soldier || m instanceof net.minecraft.world.entity.npc.Villager) {
                         continue;
                     }
-                    UUID fid = RV.memberFaction(m);
+                    UUID fid = factionOf(m);
                     if (fid == null || !hostile.contains(fid)) {
                         continue;
                     }

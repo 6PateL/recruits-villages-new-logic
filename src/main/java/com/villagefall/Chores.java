@@ -131,11 +131,15 @@ public class Chores {
         List<BlockPos> list = darkSpots(level, fid, box);
         BlockPos best = null;
         double bd = Double.MAX_VALUE;
+        // the village is lit from its centre outwards: the unlit spot nearest to the centre goes first
+        net.minecraft.world.phys.Vec3 c = box.getCenter();
         for (BlockPos p : list) {
             if (TorchGoal.claimed(p)) {
                 continue;
             }
-            double d = p.distSqr(v.blockPosition());
+            double dx = p.getX() + 0.5D - c.x;
+            double dz = p.getZ() + 0.5D - c.z;
+            double d = dx * dx + dz * dz;
             if (d < bd) {
                 bd = d;
                 best = p;

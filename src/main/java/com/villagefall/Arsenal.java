@@ -32,7 +32,7 @@ import java.util.UUID;
  */
 public class Arsenal {
     private static final String TAG = "vf_special";
-    private static final String GOLEM_TAG = "vf_golem";
+    static final String GOLEM_TAG = "vf_golem";
     private static final String[] KINDS = {"bazooka", "flame", "potato", "molotov", "octo"};
     private boolean broken;
 
