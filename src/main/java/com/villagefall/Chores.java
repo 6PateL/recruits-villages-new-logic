@@ -54,7 +54,7 @@ public class Chores {
                 if (!hasWork(level, fid, box)) {
                     return;
                 }
-            } else if (repairGolem(level, v, box)) {
+            } else if (repairGolem(level, v, box, fid)) {
                 return;
             }
             torch(level, v, box, fid);
@@ -64,9 +64,16 @@ public class Chores {
         }
     }
 
-    private boolean repairGolem(ServerLevel level, Villager v, AABB box) {
+    /** Villagers heal only their own village's golems (never another faction's, nor one hunting a player). */
+    private static boolean ours(IronGolem g, UUID fid) {
+        String tag = g.getPersistentData().getString(Arsenal.GOLEM_TAG);
+        return tag.isEmpty() || tag.equals(fid.toString());
+    }
+
+    private boolean repairGolem(ServerLevel level, Villager v, AABB box, UUID fid) {
         List<IronGolem> golems = level.getEntitiesOfClass(IronGolem.class, v.getBoundingBox().inflate(16.0D, 6.0D, 16.0D),
-                g -> g.isAlive() && g.getHealth() < g.getMaxHealth() - 1.0F && box.inflate(4.0D).contains(g.position()));
+                g -> g.isAlive() && g.getHealth() < g.getMaxHealth() - 1.0F && box.inflate(4.0D).contains(g.position())
+                        && !(g.getTarget() instanceof net.minecraft.world.entity.player.Player) && ours(g, fid));
         IronGolem best = null;
         for (IronGolem g : golems) {
             if (best == null || g.distanceToSqr(v) < best.distanceToSqr(v)) {
