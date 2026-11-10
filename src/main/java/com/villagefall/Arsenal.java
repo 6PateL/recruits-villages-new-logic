@@ -63,8 +63,8 @@ public class Arsenal {
             }
             AABB area = box.inflate(24.0D, 16.0D, 24.0D);
             AABB wide = box.inflate(80.0D, 32.0D, 80.0D);
-            String tagId = id.toString();
             UUID id = RV.id(f);
+            String tagId = id.toString();
             List<Mob> soldiers = new ArrayList<>();
             int golems = 0;
             for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, wide)) {
