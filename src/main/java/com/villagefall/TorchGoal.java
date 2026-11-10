@@ -38,6 +38,8 @@ public class TorchGoal extends Goal {
     }
 
     static boolean busy(Villager v) {
+        // finished goals are swept here (outside of the goal selector's own iteration)
+        v.goalSelector.removeAllGoals(g -> g instanceof TorchGoal t && t.finished);
         return v.goalSelector.getAvailableGoals().stream().anyMatch(g -> g.getGoal() instanceof TorchGoal);
     }
 
@@ -53,7 +55,6 @@ public class TorchGoal extends Goal {
         if (v.isSleeping()) {
             v.stopSleeping();
         }
-        v.getBrain().removeAllBehaviors();
         v.goalSelector.addGoal(0, new TorchGoal(v, spot, fid));
         WORKERS.merge(fid, 1, Integer::sum);
         CLAIMED.add(spot);
@@ -84,6 +85,11 @@ public class TorchGoal extends Goal {
         }
         double d = v.position().distanceToSqr(spot.getX() + 0.5D, spot.getY(), spot.getZ() + 0.5D);
         if (d > 2.5D * 2.5D) {
+            // the brain keeps running; its walk target is simply overwritten every few ticks, so this duty wins
+            if (ticks % 4 == 1) {
+                v.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET,
+                        new net.minecraft.world.entity.ai.memory.WalkTarget(spot, 0.75F, 1));
+            }
             if (ticks % 10 == 1 || v.getNavigation().isDone()) {
                 v.getNavigation().moveTo(spot.getX() + 0.5D, spot.getY(), spot.getZ() + 0.5D, 0.75D);
             }
@@ -105,9 +111,6 @@ public class TorchGoal extends Goal {
         CLAIMED.remove(spot);
         WORKERS.merge(fid, -1, Integer::sum);
         v.getNavigation().stop();
-        v.goalSelector.removeAllGoals(g -> g == this);
-        if (v.isAlive()) {
-            v.refreshBrain(level);
-        }
+        v.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET);
     }
 }

@@ -137,7 +137,7 @@ public class Arsenal {
     @SubscribeEvent
     public void onGolemLeave(net.minecraftforge.event.entity.EntityLeaveLevelEvent event) {
         if (!event.getLevel().isClientSide && event.getEntity() instanceof IronGolem g
-                && !g.getPersistentData().getString(GOLEM_TAG).isEmpty() && g.isAlive() && g.getRemovalReason() != null
+                && !g.getPersistentData().getString(GOLEM_TAG).isEmpty() && g.getRemovalReason() != null
                 && g.getRemovalReason() != net.minecraft.world.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK
                 && g.getRemovalReason() != net.minecraft.world.entity.Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
             com.mojang.logging.LogUtils.getLogger().info("[VillageFall] village golem removed at {}: {}",
@@ -344,7 +344,8 @@ public class Arsenal {
             }
             IronGolem g = new IronGolem(EntityType.IRON_GOLEM, level);
             g.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, level.random.nextFloat() * 360.0F, 0.0F);
-            g.setPlayerCreated(false);
+            // Recruits (OverrideIronGolemSpawn) kills every golem that is not "player created": mark ours so they stay
+            g.setPlayerCreated(true);
             g.setPersistenceRequired();
             g.restrictTo(center, 32);
             g.getPersistentData().putString(GOLEM_TAG, fid.toString());
