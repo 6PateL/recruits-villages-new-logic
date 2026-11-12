@@ -97,7 +97,7 @@ public class Repairs {
     private record Area(UUID id, String name, AABB box, boolean playerOwned, UUID claim) {}
 
     private List<Area> areas = new ArrayList<>();
-    private long areasTime = Long.MIN_VALUE;
+    private long areasTime = -100000L;
 
     private List<Area> areas(ServerLevel level) throws Exception {
         long now = level.getGameTime();
