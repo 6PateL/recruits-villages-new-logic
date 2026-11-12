@@ -34,7 +34,7 @@ public class Chores {
     @SubscribeEvent
     public void onVillager(LivingEvent.LivingTickEvent event) {
         if (!(event.getEntity() instanceof Villager v) || broken || !FallConfig.CHORES.get() || v.level().isClientSide
-                || (v.tickCount + v.getId()) % 60 != 0 || mobilised(v) || TorchGoal.busy(v)
+                || (v.tickCount + v.getId()) % 60 != 0 || mobilised(v) || TorchGoal.busy(v) || RepairGoal.busy(v)
                 || !(v.level() instanceof ServerLevel level) || !ModList.get().isLoaded("recruitsvillages")) {
             return;
         }
@@ -57,7 +57,14 @@ public class Chores {
             } else if (repairGolem(level, v, box, fid)) {
                 return;
             }
-            torch(level, v, box, fid);
+            // priorities: golems, torches (dark), campfires (winter, see WinterCare), and only then the buildings
+            if (torch(level, v, box, fid) || v.isSleeping()) {
+                return;
+            }
+            if (v.goalSelector.getRunningGoals().anyMatch(g -> g.getGoal() instanceof WinterCare.CampfireGoal)) {
+                return;
+            }
+            Repairs.work(level, v, box, fid, RV.name(f));
         } catch (Throwable t) {
             broken = true;
             com.mojang.logging.LogUtils.getLogger().warn("[VillageFall] chores disabled: {}", t.toString());
@@ -131,9 +138,9 @@ public class Chores {
         return TorchGoal.workers(fid) < 2 && !darkSpots(level, fid, box).isEmpty();
     }
 
-    private void torch(ServerLevel level, Villager v, AABB box, UUID fid) {
+    private boolean torch(ServerLevel level, Villager v, AABB box, UUID fid) {
         if (TorchGoal.workers(fid) >= 2) {
-            return; // two lamplighters per village at a time, the rest go about their day
+            return false; // two lamplighters per village at a time, the rest go about their day
         }
         List<BlockPos> list = darkSpots(level, fid, box);
         BlockPos best = null;
@@ -153,13 +160,14 @@ public class Chores {
             }
         }
         if (best == null) {
-            return;
+            return false;
         }
         if (!darkSpot(level, best)) {
             list.remove(best); // somebody already lit it
-            return;
+            return false;
         }
         list.remove(best);
         TorchGoal.start(level, v, best, fid);
+        return true;
     }
 }

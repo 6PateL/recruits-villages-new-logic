@@ -19,5 +19,6 @@ public class VillageFall {
         MinecraftForge.EVENT_BUS.register(new FireFighting());
         MinecraftForge.EVENT_BUS.register(new Arsenal());
         MinecraftForge.EVENT_BUS.register(new Chores());
+        MinecraftForge.EVENT_BUS.register(new Repairs());
     }
 }
