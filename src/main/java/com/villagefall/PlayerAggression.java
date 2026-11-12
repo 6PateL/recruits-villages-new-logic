@@ -244,39 +244,18 @@ public class PlayerAggression {
 
     // ------------------------------------------------------------------ dismantling
 
+    /** Breaking blocks on a village's land (its claim or its box): warnings first, then the village turns hostile. */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onBreak(BlockEvent.BreakEvent event) {
         if (broken || !FallConfig.AUTO_WAR.get() || !(event.getPlayer() instanceof ServerPlayer player)
                 || !(event.getLevel() instanceof ServerLevel level) || !ModList.get().isLoaded("recruitsvillages")) {
             return;
         }
-        long now = level.getGameTime();
-        int[] st = breaks.computeIfAbsent(player.getUUID(), k -> new int[]{0, (int) now, (int) now - 100});
-        if (now - st[1] > 1200L) {
-            st[0] = 0;
-            st[1] = (int) now;
-        }
-        st[0]++;
-        if (st[0] < FallConfig.DISMANTLE_BLOCKS.get() || now - st[2] < 40L) {
-            return;
-        }
-        st[2] = (int) now;
         try {
-            RV.init();
             BlockPos pos = event.getPos();
-            Object data = RV.data(level.getServer());
-            for (Object f : RV.factions(data)) {
-                if (RV.player(f)) {
-                    continue;
-                }
-                AABB box = RV.box(f);
-                if (box != null && box.contains(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D)) {
-                    if (ownVillage(level, player, f) || remembered(level, player, f)) {
-                        return;
-                    }
-                    attack(level, player, f);
-                    return;
-                }
+            Object v = villageAt(level, pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
+            if (v != null) {
+                offence(level, player, v, "break", FallConfig.DISMANTLE_BLOCKS.get());
             }
         } catch (Throwable t) {
             fail(t);
@@ -302,7 +281,9 @@ public class PlayerAggression {
         try {
             BlockPos pos = event.getPos();
             Object v = villageAt(level, pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
-            if (v != null) {
+            if (v != null && item == Items.LAVA_BUCKET) {
+                offence(level, player, v, "lava", FallConfig.LAVA_ATTEMPTS.get());
+            } else if (v != null) {
                 offence(level, player, v, "fire", FallConfig.ARSON_ATTEMPTS.get());
             }
         } catch (Throwable t) {
@@ -420,9 +401,21 @@ public class PlayerAggression {
         return false;
     }
 
+    private long lastDefLog;
+
     private void offence(ServerLevel level, ServerPlayer player, Object village, String kind, int threshold) throws Exception {
         if (ownVillage(level, player, village)) {
             return; // arson, TNT, hits in the faction you belong to are no offence
+        }
+        // nothing is a crime while the village is under attack: weapons, fire and broken blocks are then its defence
+        if (defending(level, player.position())) {
+            long t = level.getGameTime();
+            if (t - lastDefLog > 100L || t < lastDefLog) {
+                lastDefLog = t;
+                LOG.info("[VillageFall] '{}' by {} in '{}' is not counted: monsters near (defence)", kind,
+                        player.getName().getString(), RV.name(village));
+            }
+            return;
         }
         if (remembered(level, player, village)) {
             return;
@@ -437,6 +430,7 @@ public class PlayerAggression {
         }
         st[0]++;
         if (threshold > 1 && st[0] < threshold) {
+            LOG.info("[VillageFall] {} warned for '{}' in '{}' ({}/{})", player.getName().getString(), kind, RV.name(village), st[0], threshold);
             react(level, player, village, false);
             player.displayClientMessage(Component.translatable("msg.villagefall.warn_" + kind, RV.name(village), st[0], threshold), true);
             return;

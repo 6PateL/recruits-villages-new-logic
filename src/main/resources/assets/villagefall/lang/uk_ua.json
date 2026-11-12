@@ -16,5 +16,9 @@
   "msg.villagefall.alert_molotov": "Молотов у бік села «%s»! Негайна агресія!",
   "msg.villagefall.alert_tnt": "Динаміт на землі села «%s»! Село вважає вас ворогом!",
   "msg.villagefall.alert_tnt_lit": "Ви підпалили динаміт біля села «%s»! Негайна агресія!",
-  "msg.villagefall.alert_hit": "Напад на жителів села «%s»! Село вважає вас ворогом!"
+  "msg.villagefall.alert_hit": "Напад на жителів села «%s»! Село вважає вас ворогом!",
+  "msg.villagefall.warn_break": "Ви ламаєте блоки в селі «%s» (%s/%s): жителі нервують!",
+  "msg.villagefall.alert_break": "Руйнування села «%s»! Село вважає вас ворогом!",
+  "msg.villagefall.warn_lava": "Ви розливаєте лаву в селі «%s» (%s/%s): жителі в люті!",
+  "msg.villagefall.alert_lava": "Лава на землі села «%s»! Село вважає вас ворогом!"
 }

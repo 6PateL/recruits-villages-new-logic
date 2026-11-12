@@ -18,6 +18,7 @@ public class FallConfig {
     public static final ForgeConfigSpec.BooleanValue AUTO_WAR;
     public static final ForgeConfigSpec.IntValue DISMANTLE_BLOCKS;
     public static final ForgeConfigSpec.IntValue ARSON_ATTEMPTS;
+    public static final ForgeConfigSpec.IntValue LAVA_ATTEMPTS;
     public static final ForgeConfigSpec.IntValue ARSON_WINDOW_SECONDS;
     public static final ForgeConfigSpec.IntValue TERRITORY_MARGIN;
     public static final ForgeConfigSpec.IntValue MOLOTOV_RANGE;
@@ -76,6 +77,8 @@ public class FallConfig {
                 .define("autoDeclareWar", true);
         DISMANTLE_BLOCKS = b.comment("Breaking this many blocks inside a village within a minute counts as dismantling it (same as attacking its soldiers).")
                 .defineInRange("dismantleBlocks", 12, 1, 200);
+        LAVA_ATTEMPTS = b.comment("Lava buckets poured on a village's land (within the window) that count as an attack.")
+                .defineInRange("lavaAttempts", 1, 1, 20);
         ARSON_ATTEMPTS = b.comment("Lighting fires (flint and steel, fire charge, lava) inside a village this many times within arsonWindowSeconds counts as an attack on it.")
                 .defineInRange("arsonAttempts", 6, 1, 100);
         ARSON_WINDOW_SECONDS = b.comment("Time window for counting arson attempts.")

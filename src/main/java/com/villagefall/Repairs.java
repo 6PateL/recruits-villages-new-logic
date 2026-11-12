@@ -94,7 +94,7 @@ public class Repairs {
 
     // ------------------------------------------------------------------ recording the damage
 
-    private record Area(UUID id, String name, AABB box, boolean playerOwned) {}
+    private record Area(UUID id, String name, AABB box, boolean playerOwned, UUID claim) {}
 
     private List<Area> areas = new ArrayList<>();
     private long areasTime = Long.MIN_VALUE;
@@ -107,7 +107,7 @@ public class Repairs {
             for (Object f : RV.factions(RV.data(level.getServer()))) {
                 AABB box = RV.box(f);
                 if (box != null) {
-                    list.add(new Area(RV.id(f), RV.name(f), box.inflate(6.0D), RV.player(f)));
+                    list.add(new Area(RV.id(f), RV.name(f), box.inflate(6.0D), RV.player(f), RV.claimAt(level, RV.center(f))));
                 }
             }
             areas = list;
@@ -120,6 +120,15 @@ public class Repairs {
         for (Area a : areas(level)) {
             if (a.box().contains(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D)) {
                 return a;
+            }
+        }
+        // outside every box: the village's claimed chunks are its land too
+        UUID claim = RV.claimAt(level, p);
+        if (claim != null) {
+            for (Area a : areas(level)) {
+                if (claim.equals(a.claim())) {
+                    return a;
+                }
             }
         }
         return null;
@@ -200,11 +209,15 @@ public class Repairs {
         ServerLevel level = (ServerLevel) event.getLevel();
         try {
             Area a = areaAt(level, event.getPos());
-            if (a == null || a.playerOwned()) {
+            if (a == null) {
+                LOG.info("[VillageFall] repairs: {} broke a block at {}: no village land there, not recorded",
+                        player.getName().getString(), event.getPos().toShortString());
                 return;
             }
             Object own = RV.factionOfPlayer(level, player);
-            if (own != null && a.id().equals(RV.id(own))) {
+            if (a.playerOwned() || (own != null && a.id().equals(RV.id(own)))) {
+                LOG.info("[VillageFall] repairs: {} broke a block in his own village '{}': not recorded",
+                        player.getName().getString(), a.name());
                 return;
             }
             if (record(level, a, event.getPos(), event.getState())) {

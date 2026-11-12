@@ -167,6 +167,20 @@ final class RV {
         }
     }
 
+    /** The point lies on the village's land: inside its box (a little widened) or in a chunk of its Recruits claim. */
+    static boolean onLand(ServerLevel level, Object f, BlockPos p) {
+        net.minecraft.world.phys.AABB box = box(f);
+        if (box != null && box.inflate(6.0D).contains(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D)) {
+            return true;
+        }
+        try {
+            UUID claim = claimAt(level, p);
+            return claim != null && claim.equals(claimAt(level, center(f)));
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     static net.minecraft.world.phys.AABB box(Object f) {
         try {
             return (net.minecraft.world.phys.AABB) villageBox.invoke(null, f);

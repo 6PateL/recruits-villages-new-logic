@@ -46,7 +46,7 @@ public class Chores {
             }
             Object f = RV.faction(RV.data(level.getServer()), fid);
             AABB box = f == null ? null : RV.box(f);
-            if (box == null || !box.inflate(4.0D).contains(v.position())) {
+            if (box == null || !RV.onLand(level, f, v.blockPosition())) {
                 return;
             }
             if (v.isSleeping()) {
@@ -79,7 +79,7 @@ public class Chores {
 
     private boolean repairGolem(ServerLevel level, Villager v, AABB box, UUID fid) {
         List<IronGolem> golems = level.getEntitiesOfClass(IronGolem.class, v.getBoundingBox().inflate(16.0D, 6.0D, 16.0D),
-                g -> g.isAlive() && g.getHealth() < g.getMaxHealth() - 1.0F && box.inflate(4.0D).contains(g.position())
+                g -> g.isAlive() && g.getHealth() < g.getMaxHealth() - 1.0F && box.inflate(24.0D).contains(g.position())
                         && !(g.getTarget() instanceof net.minecraft.world.entity.player.Player) && ours(g, fid));
         IronGolem best = null;
         for (IronGolem g : golems) {
