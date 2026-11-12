@@ -86,7 +86,11 @@ public class PlayerAggression {
                 }
             }
         }
-        return RV.memberFaction(e);
+        try {
+            return RV.memberFaction(e);
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     // ------------------------------------------------------------------ territory helpers
