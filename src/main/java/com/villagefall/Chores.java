@@ -46,6 +46,9 @@ public class Chores {
             }
             Object f = RV.faction(RV.data(level.getServer()), fid);
             AABB box = f == null ? null : RV.box(f);
+            if (f != null) {
+                centers.put(fid, RV.center(f));
+            }
             if (box == null || !RV.onLand(level, f, v.blockPosition())) {
                 return;
             }
@@ -117,22 +120,38 @@ public class Chores {
         if (cached != null && now - cached.time() < 200L) {
             return cached.list();
         }
+        // scanned in rings from the village centre outwards, so the limit keeps the spots nearest to the centre
+        // (a plain corner-to-corner scan filled the limit with one edge strip of the box: torches in a row far away)
         List<BlockPos> list = new java.util.ArrayList<>();
+        BlockPos c = centers.getOrDefault(fid, BlockPos.containing(box.getCenter()));
         int step = 5;
-        for (int x = (int) box.minX; x <= (int) box.maxX && list.size() < 200; x += step) {
-            for (int z = (int) box.minZ; z <= (int) box.maxZ && list.size() < 200; z += step) {
-                if (!level.hasChunkAt(new BlockPos(x, 0, z))) {
-                    continue;
-                }
-                BlockPos pos = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
-                if (pos.getY() >= box.minY - 4 && pos.getY() <= box.maxY + 4 && darkSpot(level, pos)) {
-                    list.add(pos);
+        int rings = (int) Math.ceil(Math.max(box.getXsize(), box.getZsize()) / step) + 1;
+        for (int r = 0; r <= rings && list.size() < 200; r++) {
+            for (int i = -r; i <= r && list.size() < 200; i++) {
+                for (int j = -r; j <= r; j++) {
+                    if (Math.max(Math.abs(i), Math.abs(j)) != r) {
+                        continue; // only the ring itself
+                    }
+                    int x = c.getX() + i * step;
+                    int z = c.getZ() + j * step;
+                    if (x < box.minX || x > box.maxX || z < box.minZ || z > box.maxZ || !level.hasChunkAt(new BlockPos(x, 0, z))) {
+                        continue;
+                    }
+                    BlockPos pos = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
+                    if (pos.getY() >= box.minY - 4 && pos.getY() <= box.maxY + 4 && darkSpot(level, pos)) {
+                        list.add(pos);
+                    }
                 }
             }
         }
         spots.put(fid, new Spots(now, list));
+        com.mojang.logging.LogUtils.getLogger().info("[VillageFall] torches: village {} centre {} has {} dark spots (box {}x{})",
+                fid, c.toShortString(), list.size(), (int) box.getXsize(), (int) box.getZsize());
         return list;
     }
+
+    /** Real centres of the villages (RV), the lighting spreads from there. */
+    private final java.util.Map<UUID, BlockPos> centers = new java.util.HashMap<>();
 
     private boolean hasWork(ServerLevel level, UUID fid, AABB box) {
         return TorchGoal.workers(fid) < 2 && !darkSpots(level, fid, box).isEmpty();
@@ -145,19 +164,29 @@ public class Chores {
         List<BlockPos> list = darkSpots(level, fid, box);
         BlockPos best = null;
         double bd = Double.MAX_VALUE;
-        // the village is lit from its centre outwards: the unlit spot nearest to the centre goes first
-        net.minecraft.world.phys.Vec3 c = box.getCenter();
+        // first the dark spot nearest to the villager himself, but only close by (his own surroundings, ~a chunk);
+        // if everything around him is lit, the unlit spot nearest to the village centre
+        BlockPos c = centers.getOrDefault(fid, BlockPos.containing(box.getCenter()));
+        BlockPos far = null;
+        double fd = Double.MAX_VALUE;
         for (BlockPos p : list) {
             if (TorchGoal.claimed(p)) {
                 continue;
             }
-            double dx = p.getX() + 0.5D - c.x;
-            double dz = p.getZ() + 0.5D - c.z;
-            double d = dx * dx + dz * dz;
-            if (d < bd) {
+            double d = p.distSqr(v.blockPosition());
+            if (d <= 16.0D * 16.0D && d < bd) {
                 bd = d;
                 best = p;
             }
+            double dx = p.getX() - c.getX();
+            double dz = p.getZ() - c.getZ();
+            if (dx * dx + dz * dz < fd) {
+                fd = dx * dx + dz * dz;
+                far = p;
+            }
+        }
+        if (best == null) {
+            best = far;
         }
         if (best == null) {
             return false;
