@@ -32,6 +32,8 @@ public class FallConfig {
     public static final ForgeConfigSpec.BooleanValue FIREFIGHT;
     public static final ForgeConfigSpec.IntValue FIREFIGHT_RANGE;
     public static final ForgeConfigSpec.BooleanValue RETREAT_ENABLED;
+    public static final ForgeConfigSpec.BooleanValue KING_FALL;
+    public static final ForgeConfigSpec.IntValue KING_FALL_PERCENT;
     public static final ForgeConfigSpec.IntValue RETREAT_PERCENT;
     public static final ForgeConfigSpec.IntValue LEADER_FLAG_MINUTES;
     public static final ForgeConfigSpec.IntValue REFUGE_RANGE;
@@ -147,6 +149,12 @@ public class FallConfig {
                 .defineInRange("min", 2, 0, 50);
         GOLEM_MAX = b.comment("Upper limit of golems per village.")
                 .defineInRange("max", 12, 1, 100);
+        b.pop();
+        b.push("king");
+        KING_FALL = b.comment("War of annihilation: when the king is killed by an enemy of the village while only a small part of its population is left, the village falls at once (otherwise a new king takes over as usual).")
+                .define("fallOnKingDeath", true);
+        KING_FALL_PERCENT = b.comment("The village falls on the king's death when fewer than this percent of its population (recruits + civilians) is left.")
+                .defineInRange("belowPercent", 30, 1, 99);
         b.pop();
         b.push("retreat");
         RETREAT_ENABLED = b.comment("When the leader is killed by an enemy of the village (hostile mobs, barbarians, infected, a player without a faction) and few villagers are left, the survivors flee.")

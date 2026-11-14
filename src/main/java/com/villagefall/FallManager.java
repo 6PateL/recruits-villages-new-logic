@@ -42,6 +42,7 @@ public class FallManager {
         int baseline;
         long flaggedUntil;
         long lastPlayerKill = -999999L;
+        boolean doomed; // the king died while less than 30% of the people were left
     }
 
     private static final class Retreat {
@@ -128,7 +129,13 @@ public class FallManager {
             UUID leader = RV.leaderRef(f);
             if (unit != null && leader != null && leader.equals(RV.unitId(unit))) {
                 st.flaggedUntil = now + FallConfig.LEADER_FLAG_MINUTES.get() * 1200L;
-                LOG.info("[VillageFall] the leader of '{}' was killed by an enemy", RV.name(f));
+                int total = RV.recruits(f) + RV.civilians(f);
+                boolean few = st.baseline > 0 && total * 100 < FallConfig.KING_FALL_PERCENT.get() * st.baseline;
+                LOG.info("[VillageFall] the leader of '{}' was killed by an enemy (population {}/{}, {})", RV.name(f), total,
+                        st.baseline, few ? "below the limit: the village falls" : "a new leader takes over");
+                if (few && FallConfig.KING_FALL.get()) {
+                    st.doomed = true; // with so few people left there is nobody to take the crown
+                }
             }
         } catch (Throwable t) {
             fail(t);
@@ -179,6 +186,10 @@ public class FallManager {
                 st.baseline = Math.max(st.baseline, total);
             }
 
+            if (st.doomed) {
+                fall(server, level, data, factions, f, id);
+                continue;
+            }
             if (FallConfig.WIPE_FALLS.get() && total == 0) {
                 if (++st.hold >= FallConfig.FALL_GRACE_SECONDS.get() * 2) {
                     fall(server, level, data, factions, f, id);
