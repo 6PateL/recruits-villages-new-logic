@@ -117,6 +117,9 @@ public class Repairs {
     }
 
     private Area areaAt(ServerLevel level, BlockPos p) throws Exception {
+        if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) {
+            return null;
+        }
         for (Area a : areas(level)) {
             if (a.box().contains(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D)) {
                 return a;

@@ -101,6 +101,9 @@ public class PlayerAggression {
 
     /** Non-player village whose claimed chunks (Recruits claim) contain the point; falls back to the village box. */
     private Object villageAt(ServerLevel level, double x, double y, double z) throws Exception {
+        if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) {
+            return null; // села є лише у звичайному світі; в інших вимірах ті самі координати — не їхня земля
+        }
         RV.init();
         BlockPos p = BlockPos.containing(x, y, z);
         UUID claim = RV.claimAt(level, p);
@@ -404,6 +407,9 @@ public class PlayerAggression {
     private long lastDefLog;
 
     private void offence(ServerLevel level, ServerPlayer player, Object village, String kind, int threshold) throws Exception {
+        if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) {
+            return;
+        }
         if (ownVillage(level, player, village)) {
             return; // arson, TNT, hits in the faction you belong to are no offence
         }
