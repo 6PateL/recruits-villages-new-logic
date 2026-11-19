@@ -259,7 +259,7 @@ public class Arsenal {
         return m.getMainHandItem().is(it) || m.getOffhandItem().is(it);
     }
 
-    private void equip(Mob m, String kind) {
+    static void equip(Mob m, String kind) {
         Item it = itemOf(kind);
         if (it == null) {
             return;

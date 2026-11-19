@@ -33,6 +33,10 @@ public class FallConfig {
     public static final ForgeConfigSpec.IntValue FIREFIGHT_RANGE;
     public static final ForgeConfigSpec.BooleanValue RETREAT_ENABLED;
     public static final ForgeConfigSpec.BooleanValue KING_FALL;
+    public static final ForgeConfigSpec.BooleanValue REINFORCE;
+    public static final ForgeConfigSpec.IntValue REINFORCE_PER_VILLAGE;
+    public static final ForgeConfigSpec.IntValue REINFORCE_MAX;
+    public static final ForgeConfigSpec.IntValue REINFORCE_COOLDOWN;
     public static final ForgeConfigSpec.IntValue KING_FALL_PERCENT;
     public static final ForgeConfigSpec.IntValue RETREAT_PERCENT;
     public static final ForgeConfigSpec.IntValue LEADER_FLAG_MINUTES;
@@ -149,6 +153,13 @@ public class FallConfig {
                 .defineInRange("min", 2, 0, 50);
         GOLEM_MAX = b.comment("Upper limit of golems per village.")
                 .defineInRange("max", 12, 1, 100);
+        b.pop();
+        b.push("reinforcements");
+        REINFORCE = b.comment("When a player enters the flesh dimension, the villages of his faction send him a squad.")
+                .define("enabled", true);
+        REINFORCE_PER_VILLAGE = b.comment("Soldiers per village of the player's faction.").defineInRange("perVillage", 2, 0, 20);
+        REINFORCE_MAX = b.comment("At most this many soldiers per trip.").defineInRange("max", 8, 0, 60);
+        REINFORCE_COOLDOWN = b.comment("Minutes before the villages send another squad.").defineInRange("cooldownMinutes", 20, 0, 600);
         b.pop();
         b.push("king");
         KING_FALL = b.comment("War of annihilation: when the king is killed by an enemy of the village while only a small part of its population is left, the village falls at once (otherwise a new king takes over as usual).")
