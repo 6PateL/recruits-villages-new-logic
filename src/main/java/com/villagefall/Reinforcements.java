@@ -104,11 +104,11 @@ public class Reinforcements {
         } catch (Throwable ignored) {
             // without it the soldier simply has his default kit
         }
-        // повна броня
-        m.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
-        m.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
-        m.setItemSlot(EquipmentSlot.LEGS, new ItemStack(Items.IRON_LEGGINGS));
-        m.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.IRON_BOOTS));
+        // повна броня: паровий сет Create: Steam Armor (якщо мод є), інакше залізо
+        m.setItemSlot(EquipmentSlot.HEAD, armor("steam_helmet", Items.IRON_HELMET));
+        m.setItemSlot(EquipmentSlot.CHEST, armor("steam_chestplate", Items.IRON_CHESTPLATE));
+        m.setItemSlot(EquipmentSlot.LEGS, armor("steam_leggings", Items.IRON_LEGGINGS));
+        m.setItemSlot(EquipmentSlot.FEET, armor("steam_boots", Items.IRON_BOOTS));
         // наша зброя: кожен другий отримує важку
         if (i % 2 == 1) {
             String kind = HEAVY[(i / 2) % HEAVY.length];
@@ -126,5 +126,10 @@ public class Reinforcements {
         }
         m.setPersistenceRequired();
         return level.addFreshEntity(m);
+    }
+
+    private static ItemStack armor(String steam, net.minecraft.world.item.Item fallback) {
+        ResourceLocation id = new ResourceLocation("createarmor", steam);
+        return ForgeRegistries.ITEMS.containsKey(id) ? new ItemStack(ForgeRegistries.ITEMS.getValue(id)) : new ItemStack(fallback);
     }
 }
