@@ -20,5 +20,11 @@
   "msg.villagefall.warn_break": "Ви ламаєте блоки в селі «%s» (%s/%s): жителі нервують!",
   "msg.villagefall.alert_break": "Руйнування села «%s»! Село вважає вас ворогом!",
   "msg.villagefall.warn_lava": "Ви розливаєте лаву в селі «%s» (%s/%s): жителі в люті!",
-  "msg.villagefall.alert_lava": "Лава на землі села «%s»! Село вважає вас ворогом!"
+  "msg.villagefall.alert_lava": "Лава на землі села «%s»! Село вважає вас ворогом!",
+  "msg.villagefall.mark_added": "Запам'ятовано: %s (позначок: %s) — рота відновлюватиме його",
+  "msg.villagefall.mark_removed": "Позначку прибрано",
+  "msg.villagefall.mark_need_block": "Візьми в ліву руку блок, який треба відновлювати",
+  "msg.villagefall.mark_forbidden": "%s не можна вносити в креслення (лише дешеві будівельні блоки)",
+  "msg.villagefall.mark_not_own": "Це не земля твого поселення",
+  "msg.villagefall.mark_full": "Креслення заповнене (%s позначок)"
 }

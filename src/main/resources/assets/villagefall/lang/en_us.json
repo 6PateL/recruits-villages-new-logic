@@ -20,5 +20,11 @@
   "msg.villagefall.warn_break": "You are breaking blocks in the village '%s' (%s/%s): the villagers are nervous!",
   "msg.villagefall.alert_break": "Dismantling the village '%s'! The village considers you an enemy!",
   "msg.villagefall.warn_lava": "You are pouring lava in the village '%s' (%s/%s): the villagers are furious!",
-  "msg.villagefall.alert_lava": "Lava on the land of the village '%s'! The village considers you an enemy!"
+  "msg.villagefall.alert_lava": "Lava on the land of the village '%s'! The village considers you an enemy!",
+  "msg.villagefall.mark_added": "Remembered: %s (%s marks) - the company will keep restoring it",
+  "msg.villagefall.mark_removed": "Mark removed",
+  "msg.villagefall.mark_need_block": "Hold the block to restore in your off hand",
+  "msg.villagefall.mark_forbidden": "%s can't go into the blueprint (cheap building blocks only)",
+  "msg.villagefall.mark_not_own": "This is not your settlement's land",
+  "msg.villagefall.mark_full": "Blueprint is full (%s marks)"
 }

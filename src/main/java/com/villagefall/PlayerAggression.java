@@ -285,6 +285,9 @@ public class PlayerAggression {
         }
         try {
             BlockPos pos = event.getPos();
+            if (Repairs.playerPlaced(level, pos)) {
+                return; // блок поставив гравець (втеча-стовп, своя стіна) — прибрати його не злочин
+            }
             Object v = villageAt(level, pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
             if (v != null) {
                 offence(level, player, v, "break", FallConfig.DISMANTLE_BLOCKS.get());
