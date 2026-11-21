@@ -222,6 +222,35 @@ public class PlayerAggression {
         }
     }
 
+    /**
+     * Снаряд Create Big Cannons гравця (парова гармата — ручна чи наручна) влучає в землю села або поруч з його людьми.
+     * Як і з базукою: не злочин лише тоді, коли село обороняється (поруч монстри).
+     */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public void onCannonImpact(net.minecraftforge.event.entity.ProjectileImpactEvent event) {
+        if (broken || !FallConfig.AUTO_WAR.get() || !(event.getProjectile().level() instanceof ServerLevel level)
+                || !(event.getProjectile().getOwner() instanceof ServerPlayer player)
+                || !event.getProjectile().getClass().getName().startsWith("rbasamoyai.createbigcannons.")
+                || !ModList.get().isLoaded("recruitsvillages")) {
+            return;
+        }
+        try {
+            Vec3 at = event.getRayTraceResult().getLocation();
+            Object v = villageAt(level, at.x, at.y, at.z);
+            if (v == null) {
+                v = villageMemberNear(level, at, 6.0D);
+            }
+            if (v == null) {
+                v = villageAt(level, player.getX(), player.getY(), player.getZ());
+            }
+            if (v != null && !defending(level, at)) {
+                offence(level, player, v, "cannon", 1);
+            }
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
     /** Molotov lands in the village's chunks or next to its people. */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public void onMolotovImpact(net.minecraftforge.event.entity.ProjectileImpactEvent event) {

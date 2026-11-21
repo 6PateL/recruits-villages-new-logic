@@ -49,6 +49,8 @@ public class FallConfig {
     public static final ForgeConfigSpec.IntValue SHARE_POTATO;
     public static final ForgeConfigSpec.IntValue SHARE_FLAME;
     public static final ForgeConfigSpec.IntValue SHARE_OCTO;
+    public static final ForgeConfigSpec.IntValue SHARE_STEAM;
+    public static final ForgeConfigSpec.IntValue STEAM_MIN_POPULATION;
     public static final ForgeConfigSpec.IntValue SHARE_MOLOTOV;
     public static final ForgeConfigSpec.IntValue SHARE_BAZOOKA;
     public static final ForgeConfigSpec.BooleanValue CHORES;
@@ -131,6 +133,10 @@ public class FallConfig {
                 .defineInRange("flamethrowerPercent", 5, 0, 100);
         SHARE_OCTO = b.comment("Percent of foot defenders with an Octo Arms tentacle rig (never riders).")
                 .defineInRange("octoRigPercent", 5, 0, 100);
+        SHARE_STEAM = b.comment("Percent of foot defenders in a full Create: Steam Armor set with a steam cannon (developed villages only).")
+                .defineInRange("steamArmorPercent", 10, 0, 100);
+        STEAM_MIN_POPULATION = b.comment("Steam armor appears only in villages with at least this many inhabitants (villagers + soldiers).")
+                .defineInRange("steamArmorMinPopulation", 30, 1, 1000);
         SHARE_MOLOTOV = b.comment("Percent of defenders with molotovs.")
                 .defineInRange("molotovPercent", 10, 0, 100);
         SHARE_BAZOOKA = b.comment("Percent of defenders with a bazooka.")

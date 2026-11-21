@@ -92,7 +92,7 @@ public class Arsenal {
                 }
             }
             if (FallConfig.ARSENAL.get()) {
-                arm(soldiers);
+                arm(soldiers, RV.recruits(f) + RV.civilians(f));
             }
             if (FallConfig.GOLEMS.get()) {
                 int pop = RV.recruits(f) + RV.civilians(f);
@@ -191,6 +191,7 @@ public class Arsenal {
             case "flame" -> item("fromanotherworld", "flamethrower_mk_1");
             case "potato" -> item("create", "potato_cannon");
             case "molotov" -> item("hostile_civilization", "molotov");
+            case "steam" -> item("createarmor", "steam_cannon");
             default -> {
                 Item i = item("tentaworks", "netherite_tentacle_rig");
                 yield i != null ? i : item("tentaworks", "copper_tentacle_rig");
@@ -198,7 +199,7 @@ public class Arsenal {
         };
     }
 
-    private void arm(List<Mob> soldiers) {
+    private void arm(List<Mob> soldiers, int population) {
         int defenders = soldiers.size();
         if (defenders < FallConfig.ARSENAL_MIN_DEFENDERS.get()) {
             return;
@@ -253,6 +254,30 @@ public class Arsenal {
                 have++;
             }
         }
+        // паровий обладунок: лише розвинені села (від 30 жителів), 10% піхоти — одразу повний сет і парова гармата
+        Item cannon = item("createarmor", "steam_cannon");
+        int steamPct = FallConfig.SHARE_STEAM.get();
+        if (cannon != null && steamPct > 0 && population >= FallConfig.STEAM_MIN_POPULATION.get()) {
+            int want = (defenders * steamPct + 99) / 100;
+            int have = 0;
+            for (Mob m : soldiers) {
+                if ("steam".equals(m.getPersistentData().getString(TAG))) {
+                    have++;
+                }
+            }
+            for (Mob m : soldiers) {
+                if (have >= want) {
+                    break;
+                }
+                CompoundTag d = m.getPersistentData();
+                if (!d.getString(TAG).isEmpty() || rider(m) || !footSoldier(m)) {
+                    continue;
+                }
+                d.putString(TAG, "steam");
+                equip(m, "steam");
+                have++;
+            }
+        }
     }
 
     private static boolean holds(Mob m, Item it) {
@@ -298,6 +323,21 @@ public class Arsenal {
             case "molotov" -> {
                 if (!holds(m, it) && inv instanceof SimpleContainer sc && !has(inv, it)) {
                     sc.addItem(new ItemStack(it, 16));
+                }
+            }
+            case "steam" -> {
+                // повний паровий сет (+4 шкоди, менше шкоди від падіння дає сам мод) і парова гармата в руці
+                String[] set = {"steam_helmet", "steam_chestplate", "steam_leggings", "steam_boots"};
+                EquipmentSlot[] slots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+                for (int i = 0; i < 4; i++) {
+                    Item piece = item("createarmor", set[i]);
+                    if (piece != null && !m.getItemBySlot(slots[i]).is(piece)) {
+                        m.setItemSlot(slots[i], new ItemStack(piece));
+                    }
+                }
+                if (!m.getMainHandItem().is(it)) {
+                    stash(m, inv);
+                    m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(it));
                 }
             }
             default -> {
